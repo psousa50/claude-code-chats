@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
-import { ChatMessage } from "./types";
+import { AISummary, ChatMessage } from "./types";
 
 const CLAUDE_DIR = path.join(process.env.HOME || "", ".claude");
 const PROJECTS_DIR = path.join(CLAUDE_DIR, "projects");
@@ -34,6 +34,19 @@ function initDatabase(database: Database.Database): void {
       user_type,
       timestamp
     );
+
+    CREATE TABLE IF NOT EXISTS summaries (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      project_path TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      message_count INTEGER NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_summaries_lookup
+      ON summaries(type, target_id, project_path);
   `);
 }
 
@@ -313,4 +326,90 @@ export function getIndexStats(): { fileCount: number; messageCount: number } {
   ).count;
 
   return { fileCount, messageCount };
+}
+
+export function getSummary(
+  type: "session" | "project",
+  targetId: string,
+  projectPath: string
+): AISummary | null {
+  const database = getDb();
+
+  const row = database
+    .prepare(
+      "SELECT id, type, target_id, project_path, content, created_at, message_count FROM summaries WHERE type = ? AND target_id = ? AND project_path = ?"
+    )
+    .get(type, targetId, projectPath) as
+    | {
+        id: string;
+        type: string;
+        target_id: string;
+        project_path: string;
+        content: string;
+        created_at: number;
+        message_count: number;
+      }
+    | undefined;
+
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    type: row.type as "session" | "project",
+    targetId: row.target_id,
+    projectPath: row.project_path,
+    content: row.content,
+    createdAt: row.created_at,
+    messageCount: row.message_count,
+  };
+}
+
+export function saveSummary(summary: Omit<AISummary, "id">): AISummary {
+  const database = getDb();
+  const id = `${summary.type}-${summary.projectPath}-${summary.targetId}`;
+
+  database
+    .prepare(
+      `INSERT OR REPLACE INTO summaries (id, type, target_id, project_path, content, created_at, message_count)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      id,
+      summary.type,
+      summary.targetId,
+      summary.projectPath,
+      summary.content,
+      summary.createdAt,
+      summary.messageCount
+    );
+
+  return { ...summary, id };
+}
+
+export function getSessionSummaries(projectPath: string): AISummary[] {
+  const database = getDb();
+
+  const rows = database
+    .prepare(
+      "SELECT id, type, target_id, project_path, content, created_at, message_count FROM summaries WHERE type = 'session' AND project_path = ?"
+    )
+    .all(projectPath) as {
+    id: string;
+    type: string;
+    target_id: string;
+    project_path: string;
+    content: string;
+    created_at: number;
+    message_count: number;
+  }[];
+
+  return rows.map((row) => ({
+    id: row.id,
+    type: row.type as "session" | "project",
+    targetId: row.target_id,
+    projectPath: row.project_path,
+    content: row.content,
+    createdAt: row.created_at,
+    messageCount: row.message_count,
+  }));
 }

@@ -4,6 +4,7 @@ import { getSessionsSummary } from "@/lib/chat-reader";
 import { SessionList } from "@/components/session-list";
 import { formatRelativeTime } from "@/lib/format";
 import { GlobalSearch } from "@/components/global-search";
+import { SummarySection } from "@/components/summary-section";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +78,14 @@ export default async function ProjectPage({ params }: Props) {
             </svg>
             Last active {formatRelativeTime(lastActivity)}
           </span>
+        </div>
+
+        <div className="mb-6">
+          <SummarySection
+            type="project"
+            projectPath={projectPath}
+            messageCount={totalMessages}
+          />
         </div>
 
         <SessionList sessions={sessions} encodedPath={projectPath} />

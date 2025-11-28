@@ -5,6 +5,7 @@ import { ChatView } from "@/components/chat-view";
 import { CopyButton } from "@/components/copy-button";
 import { formatRelativeTime, formatDateTime } from "@/lib/format";
 import { GlobalSearch } from "@/components/global-search";
+import { SummarySection } from "@/components/summary-section";
 
 export const dynamic = "force-dynamic";
 
@@ -76,6 +77,15 @@ export default async function SessionPage({ params, searchParams }: Props) {
             </code>
             <CopyButton text={resumeCommand} label="Copy command" />
           </div>
+        </div>
+
+        <div className="mb-6">
+          <SummarySection
+            type="session"
+            projectPath={projectPath}
+            sessionId={sessionId}
+            messageCount={session.messageCount}
+          />
         </div>
 
         <ChatView messages={session.messages} highlightMessageId={highlight} />

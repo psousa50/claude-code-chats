@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { ChatMessage, ChatSession, Project, ProjectSummary, SessionSummary } from "./types";
+import { isSystemMessage as isSystemMsg, hasNoVisibleContent } from "./message-utils";
 
 const CLAUDE_DIR = path.join(process.env.HOME || "", ".claude");
 const PROJECTS_DIR = path.join(CLAUDE_DIR, "projects");
@@ -121,6 +122,7 @@ function getSessionsForProject(projectDir: string): ChatSession[] {
           timestamps.length > 0 ? Math.max(...timestamps) : 0;
 
         const projectPath = decodeProjectPath(encodedPath);
+        const visibleCount = messages.filter((m) => !isSystemMsg(m) && !hasNoVisibleContent(m)).length;
 
         return {
           id: sessionId,
@@ -130,7 +132,7 @@ function getSessionsForProject(projectDir: string): ChatSession[] {
           messages,
           firstMessage: firstMessageText.slice(0, 500),
           lastActivity,
-          messageCount: messages.length,
+          messageCount: visibleCount,
         };
       })
       .filter((session): session is ChatSession => session !== null)
@@ -266,7 +268,7 @@ export function getProjectsSummary(): ProjectSummary[] {
 
           if (fileStat.size === 0) continue;
 
-          totalMessages += countLines(filePath);
+          totalMessages += countVisibleMessages(filePath);
           const mtime = fileStat.mtime.getTime();
           if (mtime > lastActivity) {
             lastActivity = mtime;
@@ -314,6 +316,11 @@ function parseFirstLines(filePath: string, maxLines: number): ChatMessage[] {
   }
 }
 
+function countVisibleMessages(filePath: string): number {
+  const messages = parseJsonlFile(filePath);
+  return messages.filter((m) => !isSystemMsg(m) && !hasNoVisibleContent(m)).length;
+}
+
 export function getSessionsSummary(encodedPath: string): SessionSummary[] {
   const projectDirPath = path.join(PROJECTS_DIR, encodedPath);
 
@@ -347,12 +354,13 @@ export function getSessionsSummary(encodedPath: string): SessionSummary[] {
         }
 
         const firstMessageText = extractTextFromContent(firstUserMessage.message.content);
+        const visibleCount = countVisibleMessages(filePath);
 
         return {
           id: sessionId,
           encodedPath,
           firstMessage: firstMessageText.slice(0, 500),
-          messageCount: firstMessages.length,
+          messageCount: visibleCount,
           lastActivity: fileStat.mtime.getTime(),
         };
       })
@@ -390,6 +398,7 @@ export function getSessionById(
     const lastActivity = timestamps.length > 0 ? Math.max(...timestamps) : 0;
 
     const projectPath = decodeProjectPath(encodedProjectPath);
+    const visibleCount = messages.filter((m) => !isSystemMsg(m) && !hasNoVisibleContent(m)).length;
 
     return {
       id: sessionId,
@@ -399,7 +408,7 @@ export function getSessionById(
       messages,
       firstMessage: firstMessageText.slice(0, 500),
       lastActivity,
-      messageCount: messages.length,
+      messageCount: visibleCount,
     };
   } catch {
     return null;

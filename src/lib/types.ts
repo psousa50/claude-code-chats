@@ -59,3 +59,13 @@ export interface SessionSummary {
   messageCount: number;
   lastActivity: number;
 }
+
+export interface AISummary {
+  id: string;
+  type: "session" | "project";
+  targetId: string;
+  projectPath: string;
+  content: string;
+  createdAt: number;
+  messageCount: number;
+}
