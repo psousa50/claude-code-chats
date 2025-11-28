@@ -1,0 +1,40 @@
+export function parseTimestamp(timestamp: string | number): number {
+  if (typeof timestamp === "number") {
+    return timestamp;
+  }
+  const parsed = Date.parse(timestamp);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
+export function formatRelativeTime(timestamp: number): string {
+  const now = Date.now();
+  const diff = now - timestamp;
+
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  const weeks = Math.floor(diff / 604800000);
+  const months = Math.floor(diff / 2592000000);
+
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7) return `${days}d ago`;
+  if (weeks < 4) return `${weeks}w ago`;
+  return `${months}mo ago`;
+}
+
+export function formatDateTime(timestamp: string | number): string {
+  const ts = parseTimestamp(timestamp);
+  return new Date(ts).toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export function encodeProjectPath(path: string): string {
+  return path.replace(/\//g, "-");
+}
