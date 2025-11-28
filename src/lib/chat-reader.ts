@@ -6,7 +6,33 @@ const CLAUDE_DIR = path.join(process.env.HOME || "", ".claude");
 const PROJECTS_DIR = path.join(CLAUDE_DIR, "projects");
 
 function decodeProjectPath(encodedPath: string): string {
-  return encodedPath.replace(/-/g, "/");
+  const simpleDecode = encodedPath.replace(/-/g, "/");
+
+  if (fs.existsSync(simpleDecode)) {
+    return simpleDecode;
+  }
+
+  const parts = encodedPath.split("-").filter(Boolean);
+
+  function tryDecode(index: number, currentPath: string): string | null {
+    if (index >= parts.length) {
+      return fs.existsSync(currentPath) ? currentPath : null;
+    }
+
+    for (let end = parts.length; end > index; end--) {
+      const segment = parts.slice(index, end).join("-");
+      const tryPath = currentPath + "/" + segment;
+
+      if (fs.existsSync(tryPath)) {
+        const result = tryDecode(end, tryPath);
+        if (result) return result;
+      }
+    }
+
+    return null;
+  }
+
+  return tryDecode(0, "") || simpleDecode;
 }
 
 function extractProjectName(projectPath: string): string {
