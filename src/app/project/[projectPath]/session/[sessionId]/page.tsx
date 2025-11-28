@@ -4,15 +4,18 @@ import { getSessionById } from "@/lib/chat-reader";
 import { ChatView } from "@/components/chat-view";
 import { CopyButton } from "@/components/copy-button";
 import { formatRelativeTime, formatDateTime } from "@/lib/format";
+import { GlobalSearch } from "@/components/global-search";
 
 export const dynamic = "force-dynamic";
 
 interface Props {
   params: Promise<{ projectPath: string; sessionId: string }>;
+  searchParams: Promise<{ highlight?: string }>;
 }
 
-export default async function SessionPage({ params }: Props) {
+export default async function SessionPage({ params, searchParams }: Props) {
   const { projectPath, sessionId } = await params;
+  const { highlight } = await searchParams;
   const session = getSessionById(projectPath, sessionId);
 
   if (!session) {
@@ -25,18 +28,21 @@ export default async function SessionPage({ params }: Props) {
     <div className="min-h-screen">
       <header className="border-b border-neutral-800 bg-neutral-900/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <Link
               href={`/project/${projectPath}`}
-              className="p-2 -ml-2 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 rounded-lg transition-colors"
+              className="p-2 -ml-2 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 rounded-lg transition-colors flex-shrink-0"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </Link>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 hidden sm:block">
               <h1 className="text-lg font-semibold text-neutral-100 truncate">{session.projectName}</h1>
               <p className="text-xs text-neutral-500 truncate font-mono">{session.id}</p>
+            </div>
+            <div className="flex-1 max-w-md">
+              <GlobalSearch />
             </div>
           </div>
         </div>
@@ -72,7 +78,7 @@ export default async function SessionPage({ params }: Props) {
           </div>
         </div>
 
-        <ChatView messages={session.messages} />
+        <ChatView messages={session.messages} highlightMessageId={highlight} />
       </main>
     </div>
   );

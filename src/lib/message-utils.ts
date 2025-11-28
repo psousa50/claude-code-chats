@@ -23,3 +23,19 @@ export function isSystemMessage(message: ChatMessage): boolean {
 
   return false;
 }
+
+export function hasNoVisibleContent(message: ChatMessage): boolean {
+  const content = message.message.content;
+
+  if (typeof content === "string") {
+    return content.trim().length === 0;
+  }
+
+  if (content.length === 0) return true;
+
+  const hasVisibleText = content.some(
+    (block) => block.type === "text" && block.text.trim().length > 0
+  );
+
+  return !hasVisibleText;
+}

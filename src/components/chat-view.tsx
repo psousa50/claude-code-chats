@@ -1,32 +1,49 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { ChatMessage } from "@/lib/types";
 import { MessageBubble } from "./message-bubble";
 import { parseTimestamp } from "@/lib/format";
-import { isSystemMessage } from "@/lib/message-utils";
+import { isSystemMessage, hasNoVisibleContent } from "@/lib/message-utils";
 
 interface ChatViewProps {
   messages: ChatMessage[];
   previewCount?: number;
+  highlightMessageId?: string;
 }
 
-export function ChatView({ messages, previewCount = 6 }: ChatViewProps) {
-  const [showAll, setShowAll] = useState(false);
+export function ChatView({ messages, previewCount = 6, highlightMessageId }: ChatViewProps) {
+  const [showAll, setShowAll] = useState(!!highlightMessageId);
+  const highlightRef = useRef<HTMLDivElement>(null);
 
   const filteredMessages = useMemo(() => {
-    return messages.filter((m) => !isSystemMessage(m));
+    return messages.filter((m) => !isSystemMessage(m) && !hasNoVisibleContent(m));
   }, [messages]);
 
   const sortedMessages = [...filteredMessages].sort((a, b) => parseTimestamp(a.timestamp) - parseTimestamp(b.timestamp));
   const displayMessages = showAll ? sortedMessages : sortedMessages.slice(0, previewCount);
   const hasMore = sortedMessages.length > previewCount;
 
+  useEffect(() => {
+    if (highlightMessageId && highlightRef.current) {
+      highlightRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [highlightMessageId]);
+
   return (
     <div className="space-y-4">
-      {displayMessages.map((message) => (
-        <MessageBubble key={message.uuid} message={message} compact={!showAll} />
-      ))}
+      {displayMessages.map((message) => {
+        const isHighlighted = highlightMessageId === message.uuid;
+        return (
+          <div
+            key={message.uuid}
+            ref={isHighlighted ? highlightRef : undefined}
+            className={isHighlighted ? "ring-2 ring-amber-500 ring-offset-2 ring-offset-neutral-950 rounded-lg" : ""}
+          >
+            <MessageBubble message={message} compact={!showAll} />
+          </div>
+        );
+      })}
 
       {hasMore && (
         <div className="flex justify-center pt-4">
