@@ -5,12 +5,14 @@ import { SearchResults } from "./search-results";
 export const dynamic = "force-dynamic";
 
 interface Props {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; project?: string }>;
 }
 
 export default async function SearchPage({ searchParams }: Props) {
-  const { q } = await searchParams;
+  const { q, project } = await searchParams;
   const query = q || "";
+
+  const backHref = project ? `/project/${project}` : "/";
 
   return (
     <div className="min-h-screen">
@@ -18,7 +20,7 @@ export default async function SearchPage({ searchParams }: Props) {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center gap-4">
             <Link
-              href="/"
+              href={backHref}
               className="p-2 -ml-2 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 rounded-lg transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -26,14 +28,14 @@ export default async function SearchPage({ searchParams }: Props) {
               </svg>
             </Link>
             <div className="flex-1">
-              <GlobalSearch />
+              <GlobalSearch projectPath={project} />
             </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
-        <SearchResults query={query} />
+        <SearchResults query={query} projectPath={project} />
       </main>
     </div>
   );

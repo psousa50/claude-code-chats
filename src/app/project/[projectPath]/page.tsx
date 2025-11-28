@@ -51,7 +51,7 @@ export default async function ProjectPage({ params }: Props) {
               <p className="text-xs text-neutral-500 truncate">{decodedPath}</p>
             </div>
             <div className="flex-1 max-w-md">
-              <GlobalSearch />
+              <GlobalSearch projectPath={projectPath} />
             </div>
           </div>
         </div>

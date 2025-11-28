@@ -42,7 +42,7 @@ export default async function SessionPage({ params, searchParams }: Props) {
               <p className="text-xs text-neutral-500 truncate font-mono">{session.id}</p>
             </div>
             <div className="flex-1 max-w-md">
-              <GlobalSearch />
+              <GlobalSearch projectPath={projectPath} />
             </div>
           </div>
         </div>

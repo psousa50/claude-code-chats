@@ -3,7 +3,11 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
-export function GlobalSearch() {
+interface GlobalSearchProps {
+  projectPath?: string;
+}
+
+export function GlobalSearch({ projectPath }: GlobalSearchProps) {
   const [query, setQuery] = useState("");
   const router = useRouter();
 
@@ -11,11 +15,17 @@ export function GlobalSearch() {
     (e: React.FormEvent) => {
       e.preventDefault();
       if (query.trim()) {
-        router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+        const params = new URLSearchParams({ q: query.trim() });
+        if (projectPath) {
+          params.set("project", projectPath);
+        }
+        router.push(`/search?${params.toString()}`);
       }
     },
-    [query, router]
+    [query, router, projectPath]
   );
+
+  const placeholder = projectPath ? "Search this project..." : "Search all chats...";
 
   return (
     <form onSubmit={handleSubmit} className="relative">
@@ -36,7 +46,7 @@ export function GlobalSearch() {
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search all chats..."
+        placeholder={placeholder}
         className="w-full pl-10 pr-4 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-sm placeholder-neutral-500 focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600 transition-colors"
       />
     </form>

@@ -231,7 +231,7 @@ export interface SearchResult {
   rank: number;
 }
 
-export function search(query: string, limit: number = 50): SearchResult[] {
+export function search(query: string, limit: number = 50, projectPath?: string): SearchResult[] {
   if (!query.trim()) {
     return [];
   }
@@ -244,9 +244,23 @@ export function search(query: string, limit: number = 50): SearchResult[] {
     .map((term) => `"${term}"*`)
     .join(" ");
 
-  const results = database
-    .prepare(
-      `
+  const sqlQuery = projectPath
+    ? `
+      SELECT
+        content,
+        session_id,
+        project_path,
+        message_uuid,
+        user_type,
+        timestamp,
+        snippet(messages_fts, 0, '<mark>', '</mark>', '...', 64) as snippet,
+        rank
+      FROM messages_fts
+      WHERE messages_fts MATCH ? AND project_path = ?
+      ORDER BY rank
+      LIMIT ?
+    `
+    : `
       SELECT
         content,
         session_id,
@@ -260,9 +274,11 @@ export function search(query: string, limit: number = 50): SearchResult[] {
       WHERE messages_fts MATCH ?
       ORDER BY rank
       LIMIT ?
-    `
-    )
-    .all(searchQuery, limit) as {
+    `;
+
+  const params = projectPath ? [searchQuery, projectPath, limit] : [searchQuery, limit];
+
+  const results = database.prepare(sqlQuery).all(...params) as {
     content: string;
     session_id: string;
     project_path: string;

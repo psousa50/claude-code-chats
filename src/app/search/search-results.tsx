@@ -30,7 +30,12 @@ function extractProjectName(projectPath: string): string {
   return parts[parts.length - 1] || projectPath;
 }
 
-export function SearchResults({ query }: { query: string }) {
+interface SearchResultsProps {
+  query: string;
+  projectPath?: string;
+}
+
+export function SearchResults({ query, projectPath }: SearchResultsProps) {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [stats, setStats] = useState<{ fileCount: number; messageCount: number } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -47,7 +52,11 @@ export function SearchResults({ query }: { query: string }) {
       setError(null);
 
       try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+        const params = new URLSearchParams({ q: query });
+        if (projectPath) {
+          params.set("project", projectPath);
+        }
+        const response = await fetch(`/api/search?${params.toString()}`);
 
         if (!response.ok) {
           throw new Error("Search failed");
@@ -65,7 +74,7 @@ export function SearchResults({ query }: { query: string }) {
     };
 
     fetchResults();
-  }, [query]);
+  }, [query, projectPath]);
 
   if (!query.trim()) {
     return (
@@ -83,7 +92,9 @@ export function SearchResults({ query }: { query: string }) {
             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
           />
         </svg>
-        <p className="text-neutral-400">Enter a search query to find messages across all chats</p>
+        <p className="text-neutral-400">
+          Enter a search query to find messages {projectPath ? "in this project" : "across all chats"}
+        </p>
         {stats && (
           <p className="text-sm text-neutral-600 mt-2">
             {stats.messageCount.toLocaleString()} messages indexed across {stats.fileCount} sessions
