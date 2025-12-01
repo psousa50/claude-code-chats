@@ -1,0 +1,62 @@
+# Claude Code Chats
+
+A Next.js web application for browsing and searching your local Claude Code chat history.
+
+## Features
+
+- **Project Browser** - View all your Claude Code projects with search and filter functionality
+- **Session History** - Browse chat sessions for each project with timestamps
+- **Message Viewer** - Expand and view full conversation threads on demand
+- **Global Search** - Search across all messages in your chat history
+- **Session Resume** - Easy copy command to resume any session with `claude --resume {sessionId}`
+- **AI Summaries** - Generate summaries for sessions and projects using the Claude API
+- **Responsive Design** - Works on different screen sizes
+
+## Prerequisites
+
+- Node.js 18+
+- Claude Code installed locally (this app reads from `~/.claude/projects`)
+
+## Installation
+
+```bash
+git clone https://github.com/psousa50/claude-code-chats.git
+cd claude-code-chats
+npm install
+```
+
+## Usage
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Environment Variables
+
+For AI-powered summaries, set your Anthropic API key:
+
+```bash
+export ANTHROPIC_API_KEY=your_api_key_here
+```
+
+## Tech Stack
+
+- [Next.js 15](https://nextjs.org/) - React framework
+- [React 19](https://react.dev/) - UI library
+- [Tailwind CSS](https://tailwindcss.com/) - Styling
+- [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) - Local search database
+- [TypeScript](https://www.typescriptlang.org/) - Type safety
+
+## How It Works
+
+The app reads Claude Code's local storage at `~/.claude/projects` to display your chat history. It creates a SQLite database for fast full-text search across all your conversations.
+
+## Disclaimer
+
+This project was created in vibe coding mode, using [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
+
+## Licence
+
+MIT
