@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getSessionsSummary } from "@/lib/chat-reader";
+import { getSessionsSummary, decodeProjectPath } from "@/lib/chat-reader";
 import { SessionList } from "@/components/session-list";
 import { formatRelativeTime } from "@/lib/format";
 import { GlobalSearch } from "@/components/global-search";
@@ -10,10 +10,6 @@ export const dynamic = "force-dynamic";
 
 interface Props {
   params: Promise<{ projectPath: string }>;
-}
-
-function decodeProjectPath(encodedPath: string): string {
-  return encodedPath.replace(/-/g, "/");
 }
 
 function extractProjectName(projectPath: string): string {

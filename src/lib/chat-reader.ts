@@ -6,7 +6,7 @@ import { isSystemMessage as isSystemMsg, hasNoVisibleContent } from "./message-u
 const CLAUDE_DIR = path.join(process.env.HOME || "", ".claude");
 const PROJECTS_DIR = path.join(CLAUDE_DIR, "projects");
 
-function decodeProjectPath(encodedPath: string): string {
+export function decodeProjectPath(encodedPath: string): string {
   const simpleDecode = encodedPath.replace(/-/g, "/");
 
   if (fs.existsSync(simpleDecode)) {

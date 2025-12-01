@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
 import { AISummary, ChatMessage } from "./types";
+import { decodeProjectPath } from "./chat-reader";
 
 const CLAUDE_DIR = path.join(process.env.HOME || "", ".claude");
 const PROJECTS_DIR = path.join(CLAUDE_DIR, "projects");
@@ -48,10 +49,6 @@ function initDatabase(database: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_summaries_lookup
       ON summaries(type, target_id, project_path);
   `);
-}
-
-function decodeProjectPath(encodedPath: string): string {
-  return encodedPath.replace(/-/g, "/");
 }
 
 function extractTextFromContent(content: ChatMessage["message"]["content"]): string {
