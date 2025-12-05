@@ -2,10 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSessionById } from "@/lib/chat-reader";
 import { ChatView } from "@/components/chat-view";
-import { CopyButton } from "@/components/copy-button";
 import { formatRelativeTime, formatDateTime } from "@/lib/format";
 import { GlobalSearch } from "@/components/global-search";
 import { SummarySection } from "@/components/summary-section";
+import { ResumeCommandCopy } from "@/components/resume-command-copy";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,6 @@ export default async function SessionPage({ params, searchParams }: Props) {
     notFound();
   }
 
-  const resumeCommand = `claude --resume ${session.id}`;
 
   return (
     <div className="min-h-screen">
@@ -71,12 +70,7 @@ export default async function SessionPage({ params, searchParams }: Props) {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <code className="px-3 py-1.5 bg-neutral-800 rounded text-xs text-neutral-300 font-mono hidden sm:block">
-              {resumeCommand}
-            </code>
-            <CopyButton text={resumeCommand} label="Copy command" />
-          </div>
+          <ResumeCommandCopy sessionId={session.id} />
         </div>
 
         <div className="mb-6">
