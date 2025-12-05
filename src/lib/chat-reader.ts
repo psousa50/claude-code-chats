@@ -1,20 +1,13 @@
 import fs from "fs";
 import path from "path";
+import { execSync } from "child_process";
 import { ChatMessage, ChatSession, Project, ProjectSummary, SessionSummary } from "./types";
 import { isSystemMessage as isSystemMsg, hasNoVisibleContent } from "./message-utils";
 
 const CLAUDE_DIR = path.join(process.env.HOME || "", ".claude");
 const PROJECTS_DIR = path.join(CLAUDE_DIR, "projects");
 
-export function decodeProjectPath(encodedPath: string): string {
-  const simpleDecode = encodedPath.replace(/-/g, "/");
-
-  if (fs.existsSync(simpleDecode)) {
-    return simpleDecode;
-  }
-
-  const parts = encodedPath.split("-").filter(Boolean);
-
+function tryRecursiveDecode(parts: string[]): string | null {
   function tryDecode(index: number, currentPath: string): string | null {
     if (index >= parts.length) {
       return fs.existsSync(currentPath) ? currentPath : null;
@@ -33,7 +26,64 @@ export function decodeProjectPath(encodedPath: string): string {
     return null;
   }
 
-  return tryDecode(0, "") || simpleDecode;
+  return tryDecode(0, "");
+}
+
+function tryGlobDecode(parts: string[]): string | null {
+  let knownPrefix = "";
+  let startIndex = 0;
+
+  for (let i = 0; i < parts.length; i++) {
+    const testPath = knownPrefix + "/" + parts[i];
+    if (fs.existsSync(testPath)) {
+      knownPrefix = testPath;
+      startIndex = i + 1;
+    } else {
+      break;
+    }
+  }
+
+  if (startIndex >= parts.length) {
+    return knownPrefix;
+  }
+
+  const remainingParts = parts.slice(startIndex);
+  const globPattern = knownPrefix + "/*" + remainingParts.join("*") + "*";
+
+  try {
+    const result = execSync(`ls -d ${globPattern} 2>/dev/null`, { encoding: "utf-8" }).trim();
+    const matches = result.split("\n").filter(Boolean);
+
+    if (matches.length === 1) {
+      return matches[0];
+    }
+  } catch {
+    // No matches or error
+  }
+
+  return null;
+}
+
+export function decodeProjectPath(encodedPath: string): string {
+  const simpleDecode = encodedPath.replace(/-/g, "/");
+
+  if (fs.existsSync(simpleDecode)) {
+    return simpleDecode;
+  }
+
+  const parts = encodedPath.split("-").filter(Boolean);
+
+  const recursiveResult = tryRecursiveDecode(parts);
+  if (recursiveResult && fs.existsSync(recursiveResult)) {
+    return recursiveResult;
+  }
+
+  const globResult = tryGlobDecode(parts);
+  if (globResult) {
+    return globResult;
+  }
+
+  return simpleDecode;
 }
 
 function extractProjectName(projectPath: string): string {
