@@ -269,15 +269,6 @@ export function getProjectByPath(encodedPath: string): Project | null {
   }
 }
 
-function countLines(filePath: string): number {
-  try {
-    const content = fs.readFileSync(filePath, "utf-8");
-    return content.split("\n").filter((line) => line.trim()).length;
-  } catch {
-    return 0;
-  }
-}
-
 function getValidSessionFiles(projectDir: string): string[] {
   try {
     const files = fs.readdirSync(projectDir);
@@ -330,6 +321,10 @@ export function getProjectsSummary(): ProjectSummary[] {
         }
 
         const projectPath = decodeProjectPath(dir);
+
+        if (!fs.existsSync(projectPath)) {
+          return null;
+        }
 
         return {
           path: projectPath,
