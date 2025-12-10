@@ -234,6 +234,7 @@ export interface SearchResult {
   content: string;
   sessionId: string;
   projectPath: string;
+  projectName: string;
   messageUuid: string;
   userType: string;
   timestamp: number;
@@ -299,16 +300,23 @@ export function search(query: string, limit: number = 50, projectPath?: string):
     rank: number;
   }[];
 
-  return results.map((row) => ({
-    content: row.content,
-    sessionId: row.session_id,
-    projectPath: row.project_path,
-    messageUuid: row.message_uuid,
-    userType: row.user_type,
-    timestamp: parseInt(row.timestamp, 10) || 0,
-    snippet: row.snippet,
-    rank: row.rank,
-  }));
+  return results.map((row) => {
+    const decodedPath = decodeProjectPath(row.project_path);
+    const pathParts = decodedPath.split("/").filter(Boolean);
+    const projectName = pathParts[pathParts.length - 1] || decodedPath;
+
+    return {
+      content: row.content,
+      sessionId: row.session_id,
+      projectPath: row.project_path,
+      projectName,
+      messageUuid: row.message_uuid,
+      userType: row.user_type,
+      timestamp: parseInt(row.timestamp, 10) || 0,
+      snippet: row.snippet,
+      rank: row.rank,
+    };
+  });
 }
 
 export function getIndexStats(): { fileCount: number; messageCount: number } {

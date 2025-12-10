@@ -8,6 +8,7 @@ interface SearchResult {
   content: string;
   sessionId: string;
   projectPath: string;
+  projectName: string;
   messageUuid: string;
   userType: string;
   timestamp: number;
@@ -19,15 +20,6 @@ interface SearchResponse {
   results: SearchResult[];
   sync: { added: number; updated: number; removed: number };
   stats: { fileCount: number; messageCount: number };
-}
-
-function decodeProjectPath(encodedPath: string): string {
-  return encodedPath.replace(/-/g, "/");
-}
-
-function extractProjectName(projectPath: string): string {
-  const parts = projectPath.split("/").filter(Boolean);
-  return parts[parts.length - 1] || projectPath;
 }
 
 interface SearchResultsProps {
@@ -163,9 +155,6 @@ export function SearchResults({ query, projectPath }: SearchResultsProps) {
 
       <div className="space-y-3">
         {results.map((result, index) => {
-          const decodedPath = decodeProjectPath(result.projectPath);
-          const projectName = extractProjectName(decodedPath);
-
           return (
             <Link
               key={`${result.sessionId}-${result.messageUuid}-${index}`}
@@ -183,7 +172,7 @@ export function SearchResults({ query, projectPath }: SearchResultsProps) {
                   >
                     {result.userType}
                   </span>
-                  <span className="text-neutral-400">{projectName}</span>
+                  <span className="text-neutral-400">{result.projectName}</span>
                 </div>
                 {result.timestamp > 0 && (
                   <span className="text-xs text-neutral-600 whitespace-nowrap">
