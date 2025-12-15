@@ -418,3 +418,25 @@ export function getSessionSummaries(projectPath: string): AISummary[] {
     messageCount: row.message_count,
   }));
 }
+
+export function renameProjectInIndex(oldEncodedPath: string, newEncodedPath: string): void {
+  const database = getDb();
+
+  const transaction = database.transaction(() => {
+    database
+      .prepare("UPDATE indexed_files SET project_path = ? WHERE project_path = ?")
+      .run(newEncodedPath, oldEncodedPath);
+
+    database
+      .prepare("UPDATE messages_fts SET project_path = ? WHERE project_path = ?")
+      .run(newEncodedPath, oldEncodedPath);
+
+    database
+      .prepare(
+        "UPDATE summaries SET project_path = ?, id = REPLACE(id, ?, ?) WHERE project_path = ?"
+      )
+      .run(newEncodedPath, oldEncodedPath, newEncodedPath, oldEncodedPath);
+  });
+
+  transaction();
+}

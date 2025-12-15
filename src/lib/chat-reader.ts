@@ -86,6 +86,10 @@ export function decodeProjectPath(encodedPath: string): string {
   return simpleDecode;
 }
 
+export function encodeProjectPath(projectPath: string): string {
+  return projectPath.replace(/\//g, "-");
+}
+
 function extractProjectName(projectPath: string): string {
   const parts = projectPath.split("/").filter(Boolean);
   return parts[parts.length - 1] || projectPath;
