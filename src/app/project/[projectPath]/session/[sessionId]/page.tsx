@@ -6,6 +6,7 @@ import { formatRelativeTime, formatDateTime } from "@/lib/format";
 import { GlobalSearch } from "@/components/global-search";
 import { SummarySection } from "@/components/summary-section";
 import { ResumeCommandCopy } from "@/components/resume-command-copy";
+import { DuplicateSessionButton } from "@/components/duplicate-session-button";
 
 export const dynamic = "force-dynamic";
 
@@ -70,7 +71,14 @@ export default async function SessionPage({ params, searchParams }: Props) {
             </p>
           </div>
 
-          <ResumeCommandCopy sessionId={session.id} />
+          <div className="flex items-center gap-3">
+            <DuplicateSessionButton
+              encodedPath={projectPath}
+              sessionId={session.id}
+              messageCount={session.messageCount}
+            />
+            <ResumeCommandCopy sessionId={session.id} />
+          </div>
         </div>
 
         <div className="mb-6">
