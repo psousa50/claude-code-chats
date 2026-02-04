@@ -14,11 +14,13 @@ interface ChatViewProps {
 
 export function ChatView({ messages, previewCount = 6, highlightMessageId }: ChatViewProps) {
   const [showAll, setShowAll] = useState(!!highlightMessageId);
+  const [showHidden, setShowHidden] = useState(false);
   const highlightRef = useRef<HTMLDivElement>(null);
 
   const filteredMessages = useMemo(() => {
+    if (showHidden) return messages;
     return messages.filter((m) => !isSystemMessage(m) && !hasNoVisibleContent(m));
-  }, [messages]);
+  }, [messages, showHidden]);
 
   const sortedMessages = [...filteredMessages].sort((a, b) => parseTimestamp(a.timestamp) - parseTimestamp(b.timestamp));
   const displayMessages = showAll ? sortedMessages : sortedMessages.slice(0, previewCount);
@@ -69,6 +71,18 @@ export function ChatView({ messages, previewCount = 6, highlightMessageId }: Cha
           </button>
         </div>
       )}
+
+      <div className="flex justify-center pt-2">
+        <label className="flex items-center gap-2 text-sm text-neutral-400 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showHidden}
+            onChange={(e) => setShowHidden(e.target.checked)}
+            className="w-4 h-4 rounded border-neutral-600 bg-neutral-800 text-amber-500 focus:ring-amber-500 focus:ring-offset-0"
+          />
+          Show system messages
+        </label>
+      </div>
 
       {displayMessages.length === 0 && (
         <div className="text-center py-12 text-neutral-500">

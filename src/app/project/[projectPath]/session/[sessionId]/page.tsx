@@ -7,6 +7,8 @@ import { GlobalSearch } from "@/components/global-search";
 import { SummarySection } from "@/components/summary-section";
 import { ResumeCommandCopy } from "@/components/resume-command-copy";
 import { DuplicateSessionButton } from "@/components/duplicate-session-button";
+import { DeleteSessionButton } from "@/components/delete-session-button";
+import { isSystemMessage, hasNoVisibleContent } from "@/lib/message-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +26,10 @@ export default async function SessionPage({ params, searchParams }: Props) {
     notFound();
   }
 
+  const totalMessageCount = session.messages.length;
+  const strippedMessageCount = session.messages.filter(
+    (m) => !isSystemMessage(m) && !hasNoVisibleContent(m)
+  ).length;
 
   return (
     <div className="min-h-screen">
@@ -75,7 +81,12 @@ export default async function SessionPage({ params, searchParams }: Props) {
             <DuplicateSessionButton
               encodedPath={projectPath}
               sessionId={session.id}
-              messageCount={session.messageCount}
+              totalMessageCount={totalMessageCount}
+              strippedMessageCount={strippedMessageCount}
+            />
+            <DeleteSessionButton
+              encodedPath={projectPath}
+              sessionId={session.id}
             />
             <ResumeCommandCopy sessionId={session.id} />
           </div>

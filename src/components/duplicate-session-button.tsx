@@ -6,17 +6,20 @@ import { useRouter } from "next/navigation";
 interface DuplicateSessionButtonProps {
   encodedPath: string;
   sessionId: string;
-  messageCount: number;
+  totalMessageCount: number;
+  strippedMessageCount: number;
 }
 
 export function DuplicateSessionButton({
   encodedPath,
   sessionId,
-  messageCount,
+  totalMessageCount,
+  strippedMessageCount,
 }: DuplicateSessionButtonProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [keepLastN, setKeepLastN] = useState<string>("");
+  const [stripToolResults, setStripToolResults] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -24,6 +27,7 @@ export function DuplicateSessionButton({
   useEffect(() => {
     if (isOpen) {
       setKeepLastN("");
+      setStripToolResults(false);
       setError(null);
       setTimeout(() => inputRef.current?.focus(), 0);
     }
@@ -42,9 +46,14 @@ export function DuplicateSessionButton({
 
   const parsedKeepLastN = keepLastN ? parseInt(keepLastN, 10) : undefined;
   const isValidKeepLastN = !keepLastN || (parsedKeepLastN && parsedKeepLastN > 0);
+
+  const baseCount = stripToolResults ? strippedMessageCount : totalMessageCount;
   const resultingMessageCount = parsedKeepLastN
-    ? Math.min(parsedKeepLastN, messageCount)
-    : messageCount;
+    ? Math.min(parsedKeepLastN, baseCount)
+    : baseCount;
+  const reductionPercent = totalMessageCount > 0
+    ? Math.round((1 - resultingMessageCount / totalMessageCount) * 100)
+    : 0;
 
   async function handleDuplicate() {
     if (!isValidKeepLastN) {
@@ -63,6 +72,7 @@ export function DuplicateSessionButton({
           encodedPath,
           sessionId,
           keepLastN: parsedKeepLastN,
+          stripToolResults,
         }),
       });
 
@@ -119,15 +129,39 @@ export function DuplicateSessionButton({
                 onChange={(e) => setKeepLastN(e.target.value)}
                 disabled={loading}
                 className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-neutral-100 placeholder-neutral-500 focus:outline-none focus:border-amber-500 disabled:opacity-50"
-                placeholder={`Leave empty for all ${messageCount} messages`}
+                placeholder={`Leave empty for all ${totalMessageCount} messages`}
               />
             </div>
 
-            <p className="text-sm text-neutral-400 mb-4">
-              This will create a new session with{" "}
-              <span className="text-neutral-200 font-medium">{resultingMessageCount}</span>{" "}
-              {resultingMessageCount === 1 ? "message" : "messages"}.
-            </p>
+            <div className="mb-4">
+              <label className="flex items-center gap-2 text-sm text-neutral-400 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={stripToolResults}
+                  onChange={(e) => setStripToolResults(e.target.checked)}
+                  disabled={loading}
+                  className="w-4 h-4 rounded border-neutral-600 bg-neutral-800 text-amber-500 focus:ring-amber-500 focus:ring-offset-0 disabled:opacity-50"
+                />
+                Strip tool results & system messages
+              </label>
+            </div>
+
+            <div className="text-sm text-neutral-400 mb-4 p-3 bg-neutral-800/50 rounded-lg">
+              <div className="flex justify-between">
+                <span>Original</span>
+                <span className="text-neutral-200">{totalMessageCount} messages</span>
+              </div>
+              <div className="flex justify-between mt-1">
+                <span>Result</span>
+                <span className="text-neutral-200">{resultingMessageCount} messages</span>
+              </div>
+              {reductionPercent > 0 && (
+                <div className="flex justify-between mt-1 text-amber-500">
+                  <span>Reduction</span>
+                  <span>{reductionPercent}%</span>
+                </div>
+              )}
+            </div>
 
             {error && <p className="text-sm text-red-400 mb-4">{error}</p>}
 

@@ -12,13 +12,69 @@ interface DuplicateRequest {
   encodedPath: string;
   sessionId: string;
   keepLastN?: number;
+  stripToolResults?: boolean;
+}
+
+interface ContentBlock {
+  type: string;
+  text?: string;
+  [key: string]: unknown;
 }
 
 interface ChatMessage {
   uuid: string;
   parentUuid: string | null;
   sessionId: string;
+  type?: string;
+  isMeta?: boolean;
+  message?: {
+    content: string | ContentBlock[];
+    [key: string]: unknown;
+  };
   [key: string]: unknown;
+}
+
+function extractTextFromContent(content: string | ContentBlock[]): string {
+  if (typeof content === "string") return content;
+  const textBlock = content.find((block) => block.type === "text");
+  return textBlock?.text || "";
+}
+
+function isSystemMessage(message: ChatMessage): boolean {
+  if (message.isMeta) return true;
+  if (!message.message?.content) return false;
+  const text = extractTextFromContent(message.message.content);
+  if (text.startsWith("<command-name>")) return true;
+  if (text.startsWith("<local-command-")) return true;
+  if (text.startsWith("Caveat:")) return true;
+  return false;
+}
+
+function stripToolResultsFromMessage(message: ChatMessage): ChatMessage {
+  if (!message.message?.content || typeof message.message.content === "string") {
+    return message;
+  }
+  const filteredContent = message.message.content.filter(
+    (block) => block.type !== "tool_result"
+  );
+  if (filteredContent.length === message.message.content.length) {
+    return message;
+  }
+  return {
+    ...message,
+    message: {
+      ...message.message,
+      content: filteredContent,
+    },
+  };
+}
+
+function hasNoVisibleContent(message: ChatMessage): boolean {
+  const content = message.message?.content;
+  if (!content) return true;
+  if (typeof content === "string") return content.trim().length === 0;
+  if (content.length === 0) return true;
+  return !content.some((block) => block.type === "text" && block.text?.trim());
 }
 
 function parseJsonlFile(filePath: string): ChatMessage[] {
@@ -43,7 +99,7 @@ function writeJsonlFile(filePath: string, messages: ChatMessage[]): void {
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as DuplicateRequest;
-    const { encodedPath, sessionId, keepLastN } = body;
+    const { encodedPath, sessionId, keepLastN, stripToolResults } = body;
 
     if (!encodedPath || !sessionId) {
       return NextResponse.json(
@@ -88,6 +144,13 @@ export async function POST(request: NextRequest) {
     let messagesToDuplicate = messages;
     if (keepLastN !== undefined && keepLastN < messages.length) {
       messagesToDuplicate = messages.slice(-keepLastN);
+    }
+
+    if (stripToolResults) {
+      messagesToDuplicate = messagesToDuplicate
+        .filter((msg) => !isSystemMessage(msg))
+        .map(stripToolResultsFromMessage)
+        .filter((msg) => !hasNoVisibleContent(msg));
     }
 
     const newSessionId = crypto.randomUUID();
