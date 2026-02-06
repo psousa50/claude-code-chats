@@ -15,14 +15,8 @@ export function ResumeCommandCopy({ sessionId }: ResumeCommandCopyProps) {
     : `claude --resume ${sessionId}`;
 
   return (
-    <div className="flex flex-col items-end gap-2">
-      <div className="flex items-center gap-3">
-        <code className="px-3 py-1.5 bg-neutral-800 rounded text-xs text-neutral-300 font-mono hidden sm:block">
-          {sessionId}
-        </code>
-        <CopyButton text={command} label="Copy command" />
-      </div>
-      <label className="flex items-center gap-2 text-xs text-neutral-400 cursor-pointer select-none">
+    <div className="flex items-center gap-3">
+      <label className="flex items-center gap-1.5 text-xs text-neutral-400 cursor-pointer select-none">
         <input
           type="checkbox"
           checked={skipPermissions}
@@ -31,6 +25,7 @@ export function ResumeCommandCopy({ sessionId }: ResumeCommandCopyProps) {
         />
         <span>Skip permissions</span>
       </label>
+      <CopyButton text={command} label="Copy command" />
     </div>
   );
 }

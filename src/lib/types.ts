@@ -1,5 +1,12 @@
 export type MessageRole = "user" | "assistant";
 
+export interface TokenUsage {
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_input_tokens: number;
+  cache_read_input_tokens: number;
+}
+
 export type ContentBlock =
   | { type: "text"; text: string }
   | { type: "tool_use"; id: string; name: string; input: unknown }
@@ -18,6 +25,7 @@ export interface ChatMessage {
   message: {
     role: MessageRole;
     content: ContentBlock[] | string;
+    usage?: TokenUsage;
   };
   uuid: string;
   timestamp: string | number;
@@ -32,6 +40,7 @@ export interface ChatSession {
   firstMessage: string;
   lastActivity: number;
   messageCount: number;
+  tokenUsage?: TokenUsage;
 }
 
 export interface Project {

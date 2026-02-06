@@ -37,6 +37,12 @@ export function formatDateTime(timestamp: string | number): string {
   });
 }
 
+export function formatTokenCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 10_000) return `${(n / 1_000).toFixed(1)}k`;
+  return n.toLocaleString("en-GB");
+}
+
 export function encodeProjectPath(path: string): string {
   return path.replace(/\//g, "-");
 }

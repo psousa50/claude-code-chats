@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSessionById } from "@/lib/chat-reader";
 import { ChatView } from "@/components/chat-view";
-import { formatRelativeTime, formatDateTime } from "@/lib/format";
+import { formatRelativeTime, formatDateTime, formatTokenCount } from "@/lib/format";
 import { GlobalSearch } from "@/components/global-search";
 import { SummarySection } from "@/components/summary-section";
 import { ResumeCommandCopy } from "@/components/resume-command-copy";
@@ -56,8 +56,8 @@ export default async function SessionPage({ params, searchParams }: Props) {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 p-4 bg-neutral-900/50 border border-neutral-800 rounded-lg">
-          <div className="flex-1 space-y-1">
+        <div className="mb-6 bg-neutral-900/50 border border-neutral-800 rounded-lg divide-y divide-neutral-800">
+          <div className="flex items-center justify-between gap-4 px-4 py-3">
             <div className="flex items-center gap-4 text-sm text-neutral-400">
               <span className="flex items-center gap-1.5">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,23 +71,46 @@ export default async function SessionPage({ params, searchParams }: Props) {
                 </svg>
                 {formatRelativeTime(session.lastActivity)}
               </span>
+              <span className="text-xs text-neutral-600 hidden sm:inline">
+                {formatDateTime(session.lastActivity)}
+              </span>
             </div>
-            <p className="text-xs text-neutral-600">
-              Last active: {formatDateTime(session.lastActivity)}
-            </p>
+            <div className="flex items-center gap-2">
+              <DuplicateSessionButton
+                encodedPath={projectPath}
+                sessionId={session.id}
+                totalMessageCount={totalMessageCount}
+                strippedMessageCount={strippedMessageCount}
+              />
+              <DeleteSessionButton
+                encodedPath={projectPath}
+                sessionId={session.id}
+              />
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <DuplicateSessionButton
-              encodedPath={projectPath}
-              sessionId={session.id}
-              totalMessageCount={totalMessageCount}
-              strippedMessageCount={strippedMessageCount}
-            />
-            <DeleteSessionButton
-              encodedPath={projectPath}
-              sessionId={session.id}
-            />
+          <div className="flex items-center justify-between gap-4 px-4 py-2.5">
+            {session.tokenUsage ? (
+              <div className="flex items-center gap-4 text-xs">
+                <span className="text-neutral-600">Tokens</span>
+                <span>
+                  <span className="text-neutral-500">in</span>{" "}
+                  <span className="text-neutral-300">{formatTokenCount(session.tokenUsage.input_tokens)}</span>
+                </span>
+                <span>
+                  <span className="text-neutral-500">out</span>{" "}
+                  <span className="text-neutral-300">{formatTokenCount(session.tokenUsage.output_tokens)}</span>
+                </span>
+                <span>
+                  <span className="text-neutral-500">cache read</span>{" "}
+                  <span className="text-neutral-300">{formatTokenCount(session.tokenUsage.cache_read_input_tokens)}</span>
+                </span>
+                <span>
+                  <span className="text-neutral-500">cache write</span>{" "}
+                  <span className="text-neutral-300">{formatTokenCount(session.tokenUsage.cache_creation_input_tokens)}</span>
+                </span>
+              </div>
+            ) : <div />}
             <ResumeCommandCopy sessionId={session.id} />
           </div>
         </div>

@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
-import { ChatMessage, ChatSession, Project, ProjectSummary, SessionSummary } from "./types";
+import { ChatMessage, ChatSession, Project, ProjectSummary, SessionSummary, TokenUsage } from "./types";
 import { isSystemMessage as isSystemMsg, hasNoVisibleContent } from "./message-utils";
 
 const CLAUDE_DIR = path.join(process.env.HOME || "", ".claude");
@@ -146,6 +146,30 @@ function parseJsonlFile(filePath: string): ChatMessage[] {
   }
 }
 
+function computeSessionTokens(messages: ChatMessage[]): TokenUsage | undefined {
+  let input = 0, output = 0, cacheCreation = 0, cacheRead = 0;
+  let found = false;
+
+  for (const msg of messages) {
+    const usage = msg.message.usage;
+    if (!usage) continue;
+    found = true;
+    input += usage.input_tokens || 0;
+    output += usage.output_tokens || 0;
+    cacheCreation += usage.cache_creation_input_tokens || 0;
+    cacheRead += usage.cache_read_input_tokens || 0;
+  }
+
+  if (!found) return undefined;
+
+  return {
+    input_tokens: input,
+    output_tokens: output,
+    cache_creation_input_tokens: cacheCreation,
+    cache_read_input_tokens: cacheRead,
+  };
+}
+
 function getSessionsForProject(projectDir: string): ChatSession[] {
   try {
     const files = fs.readdirSync(projectDir);
@@ -177,6 +201,7 @@ function getSessionsForProject(projectDir: string): ChatSession[] {
 
         const projectPath = decodeProjectPath(encodedPath);
         const visibleCount = messages.filter((m) => !isSystemMsg(m) && !hasNoVisibleContent(m)).length;
+        const tokenUsage = computeSessionTokens(messages);
 
         return {
           id: sessionId,
@@ -187,6 +212,7 @@ function getSessionsForProject(projectDir: string): ChatSession[] {
           firstMessage: firstMessageText.slice(0, 500),
           lastActivity,
           messageCount: visibleCount,
+          ...(tokenUsage && { tokenUsage }),
         };
       })
       .filter((session): session is ChatSession => session !== null)
@@ -448,6 +474,7 @@ export function getSessionById(
 
     const projectPath = decodeProjectPath(encodedProjectPath);
     const visibleCount = messages.filter((m) => !isSystemMsg(m) && !hasNoVisibleContent(m)).length;
+    const tokenUsage = computeSessionTokens(messages);
 
     return {
       id: sessionId,
@@ -458,6 +485,7 @@ export function getSessionById(
       firstMessage: firstMessageText.slice(0, 500),
       lastActivity,
       messageCount: visibleCount,
+      ...(tokenUsage && { tokenUsage }),
     };
   } catch {
     return null;
