@@ -12,28 +12,50 @@ interface SessionListProps {
 
 export function SessionList({ sessions, encodedPath }: SessionListProps) {
   const [search, setSearch] = useState("");
+  const [hideShort, setHideShort] = useState(true);
+
+  const shortCount = useMemo(() => sessions.filter((s) => s.messageCount < 3).length, [sessions]);
 
   const filteredSessions = useMemo(() => {
-    if (!search.trim()) {
-      return sessions;
+    let filtered = sessions;
+
+    if (hideShort) {
+      filtered = filtered.filter((s) => s.messageCount >= 3);
     }
 
-    const searchLower = search.toLowerCase();
-    return sessions.filter(
-      (s) =>
-        s.firstMessage.toLowerCase().includes(searchLower) ||
-        s.id.toLowerCase().includes(searchLower)
-    );
-  }, [sessions, search]);
+    if (search.trim()) {
+      const searchLower = search.toLowerCase();
+      filtered = filtered.filter(
+        (s) =>
+          s.firstMessage.toLowerCase().includes(searchLower) ||
+          s.id.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return filtered;
+  }, [sessions, search, hideShort]);
 
   return (
     <div>
-      <div className="mb-6">
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder="Search sessions..."
-        />
+      <div className="mb-6 flex items-center gap-4">
+        <div className="flex-1">
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Search sessions..."
+          />
+        </div>
+        {shortCount > 0 && (
+          <label className="flex items-center gap-2 text-xs text-neutral-500 cursor-pointer whitespace-nowrap">
+            <input
+              type="checkbox"
+              checked={hideShort}
+              onChange={(e) => setHideShort(e.target.checked)}
+              className="rounded border-neutral-600 bg-neutral-800"
+            />
+            Hide short ({shortCount})
+          </label>
+        )}
       </div>
 
       {filteredSessions.length === 0 ? (

@@ -90,6 +90,12 @@ export function encodeProjectPath(projectPath: string): string {
   return projectPath.replace(/\//g, "-");
 }
 
+const TEMP_PREFIXES = ["/tmp", "/var/folders", "/private/tmp", "/private/var/folders"];
+
+function isTempPath(projectPath: string): boolean {
+  return TEMP_PREFIXES.some((prefix) => projectPath.startsWith(prefix));
+}
+
 function extractProjectName(projectPath: string): string {
   const parts = projectPath.split("/").filter(Boolean);
   return parts[parts.length - 1] || projectPath;
@@ -352,7 +358,7 @@ export function getProjectsSummary(): ProjectSummary[] {
 
         const projectPath = decodeProjectPath(dir);
 
-        if (!fs.existsSync(projectPath)) {
+        if (!fs.existsSync(projectPath) || isTempPath(projectPath)) {
           return null;
         }
 

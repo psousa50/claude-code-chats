@@ -1,4 +1,4 @@
-import { spawn } from "child_process";
+import { query } from "@anthropic-ai/claude-agent-sdk";
 
 export interface ClaudeResponse {
   success: boolean;
@@ -6,53 +6,34 @@ export interface ClaudeResponse {
   error?: string;
 }
 
-export async function invokeClaude(prompt: string, stdin?: string): Promise<ClaudeResponse> {
-  return new Promise((resolve) => {
-    const args = ["-p", prompt, "--output-format", "text"];
+async function invokeClaude(prompt: string): Promise<ClaudeResponse> {
+  try {
+    let result = "";
 
-    const child = spawn("claude", args, {
-      stdio: ["pipe", "pipe", "pipe"],
-      timeout: 120000,
-    });
-
-    let stdout = "";
-    let stderr = "";
-
-    child.stdout.on("data", (data) => {
-      stdout += data.toString();
-    });
-
-    child.stderr.on("data", (data) => {
-      stderr += data.toString();
-    });
-
-    child.on("error", (error) => {
-      resolve({
-        success: false,
-        output: "",
-        error: `Failed to spawn claude: ${error.message}`,
-      });
-    });
-
-    child.on("close", (code) => {
-      if (code === 0) {
-        resolve({ success: true, output: stdout.trim() });
-      } else {
-        resolve({
-          success: false,
-          output: stdout.trim(),
-          error: stderr || `Process exited with code ${code}`,
-        });
+    for await (const message of query({
+      prompt,
+      options: {
+        allowedTools: [],
+        maxTurns: 1,
+      },
+    })) {
+      if ("result" in message) {
+        result = message.result as string;
       }
-    });
-
-    if (stdin) {
-      child.stdin.write(stdin);
-      child.stdin.end();
-    } else {
-      child.stdin.end();
     }
-  });
+
+    if (!result) {
+      return { success: false, output: "", error: "No result returned" };
+    }
+
+    return { success: true, output: result.trim() };
+  } catch (error) {
+    return {
+      success: false,
+      output: "",
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
 }
 
 export async function generateSessionSummary(conversationText: string): Promise<ClaudeResponse> {
