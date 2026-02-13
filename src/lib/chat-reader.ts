@@ -3,6 +3,7 @@ import path from "path";
 import { execSync } from "child_process";
 import { ChatMessage, ChatSession, Project, ProjectSummary, SessionSummary, TokenUsage } from "./types";
 import { isSystemMessage as isSystemMsg, hasNoVisibleContent } from "./message-utils";
+import { getProjectStats } from "./search-db";
 
 const CLAUDE_DIR = path.join(process.env.HOME || "", ".claude");
 const PROJECTS_DIR = path.join(CLAUDE_DIR, "projects");
@@ -330,6 +331,7 @@ export function getProjectsSummary(): ProjectSummary[] {
     }
 
     const projectDirs = fs.readdirSync(PROJECTS_DIR);
+    const stats = getProjectStats();
 
     return projectDirs
       .map((dir) => {
@@ -346,20 +348,27 @@ export function getProjectsSummary(): ProjectSummary[] {
           return null;
         }
 
-        const sessions = getSessionsSummary(dir);
-        if (sessions.length === 0) {
+        const sessionFiles = getValidSessionFiles(projectDirPath);
+        if (sessionFiles.length === 0) {
           return null;
         }
 
-        const totalMessages = sessions.reduce((sum, s) => sum + s.messageCount, 0);
-        const lastActivity = Math.max(...sessions.map((s) => s.lastActivity));
+        const dbStats = stats.get(dir);
+
+        let lastActivity = 0;
+        for (const file of sessionFiles) {
+          const filePath = path.join(projectDirPath, file);
+          const fileStat = fs.statSync(filePath);
+          const mtime = fileStat.mtime.getTime();
+          if (mtime > lastActivity) lastActivity = mtime;
+        }
 
         return {
           path: projectPath,
           name: extractProjectName(projectPath),
           encodedPath: dir,
-          sessionCount: sessions.length,
-          totalMessages,
+          sessionCount: dbStats?.sessionCount ?? sessionFiles.length,
+          totalMessages: dbStats?.totalMessages ?? 0,
           lastActivity,
         };
       })

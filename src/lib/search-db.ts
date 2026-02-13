@@ -24,7 +24,8 @@ function initDatabase(database: Database.Database): void {
       path TEXT PRIMARY KEY,
       mtime INTEGER NOT NULL,
       session_id TEXT NOT NULL,
-      project_path TEXT NOT NULL
+      project_path TEXT NOT NULL,
+      visible_message_count INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
@@ -49,6 +50,14 @@ function initDatabase(database: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_summaries_lookup
       ON summaries(type, target_id, project_path);
   `);
+
+  try {
+    database.exec("ALTER TABLE indexed_files ADD COLUMN visible_message_count INTEGER NOT NULL DEFAULT 0");
+    database.exec("DELETE FROM indexed_files");
+    database.exec("DELETE FROM messages_fts");
+  } catch {
+    // Column already exists
+  }
 }
 
 function extractTextFromContent(content: ChatMessage["message"]["content"]): string {
@@ -150,12 +159,14 @@ function indexFile(database: Database.Database, fileInfo: FileInfo): void {
     VALUES (?, ?, ?, ?, ?, ?)
   `);
 
+  let visibleCount = 0;
   for (const message of messages) {
     if (isSystemMessage(message)) continue;
 
     const content = extractTextFromContent(message.message.content);
     if (!content.trim()) continue;
 
+    visibleCount++;
     insertMessage.run(
       content,
       fileInfo.sessionId,
@@ -167,11 +178,11 @@ function indexFile(database: Database.Database, fileInfo: FileInfo): void {
   }
 
   const upsertFile = database.prepare(`
-    INSERT OR REPLACE INTO indexed_files (path, mtime, session_id, project_path)
-    VALUES (?, ?, ?, ?)
+    INSERT OR REPLACE INTO indexed_files (path, mtime, session_id, project_path, visible_message_count)
+    VALUES (?, ?, ?, ?, ?)
   `);
 
-  upsertFile.run(fileInfo.path, fileInfo.mtime, fileInfo.sessionId, fileInfo.encodedPath);
+  upsertFile.run(fileInfo.path, fileInfo.mtime, fileInfo.sessionId, fileInfo.encodedPath, visibleCount);
 }
 
 function removeFileFromIndex(database: Database.Database, filePath: string): void {
@@ -417,6 +428,31 @@ export function getSessionSummaries(projectPath: string): AISummary[] {
     createdAt: row.created_at,
     messageCount: row.message_count,
   }));
+}
+
+export function getProjectStats(): Map<string, { sessionCount: number; totalMessages: number }> {
+  const database = getDb();
+
+  const fileCount = (
+    database.prepare("SELECT COUNT(*) as count FROM indexed_files").get() as { count: number }
+  ).count;
+
+  if (fileCount === 0) {
+    syncIndex();
+  }
+
+  const rows = database.prepare(`
+    SELECT project_path, COUNT(*) as sessions, SUM(visible_message_count) as messages
+    FROM indexed_files
+    WHERE visible_message_count > 0
+    GROUP BY project_path
+  `).all() as { project_path: string; sessions: number; messages: number }[];
+
+  const map = new Map<string, { sessionCount: number; totalMessages: number }>();
+  for (const row of rows) {
+    map.set(row.project_path, { sessionCount: row.sessions, totalMessages: row.messages });
+  }
+  return map;
 }
 
 export function renameProjectInIndex(oldEncodedPath: string, newEncodedPath: string): void {
