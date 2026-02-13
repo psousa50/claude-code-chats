@@ -346,36 +346,19 @@ export function getProjectsSummary(): ProjectSummary[] {
           return null;
         }
 
-        const sessionFiles = getValidSessionFiles(projectDirPath);
-        if (sessionFiles.length === 0) {
+        const sessions = getSessionsSummary(dir);
+        if (sessions.length === 0) {
           return null;
         }
 
-        let totalMessages = 0;
-        let lastActivity = 0;
-
-        for (const file of sessionFiles) {
-          const filePath = path.join(projectDirPath, file);
-          const fileStat = fs.statSync(filePath);
-
-          if (fileStat.size === 0) continue;
-
-          totalMessages += countVisibleMessages(filePath);
-          const mtime = fileStat.mtime.getTime();
-          if (mtime > lastActivity) {
-            lastActivity = mtime;
-          }
-        }
-
-        if (totalMessages === 0) {
-          return null;
-        }
+        const totalMessages = sessions.reduce((sum, s) => sum + s.messageCount, 0);
+        const lastActivity = Math.max(...sessions.map((s) => s.lastActivity));
 
         return {
           path: projectPath,
           name: extractProjectName(projectPath),
           encodedPath: dir,
-          sessionCount: sessionFiles.length,
+          sessionCount: sessions.length,
           totalMessages,
           lastActivity,
         };

@@ -91,7 +91,7 @@ export function SessionList({ sessions, encodedPath }: SessionListProps) {
       )}
 
       <div className="mt-4 flex items-center justify-center gap-4 text-xs text-neutral-600">
-        <span>Showing {paginatedSessions.length} of {filteredSessions.length} sessions</span>
+        <span>Showing {paginatedSessions.length} of {sessions.length} sessions{filteredSessions.length < sessions.length && ` (${sessions.length - filteredSessions.length} hidden)`}</span>
         {hasMore && (
           <button
             onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
