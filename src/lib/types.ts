@@ -59,6 +59,7 @@ export interface ProjectSummary {
   sessionCount: number;
   totalMessages: number;
   lastActivity: number;
+  hasMemory: boolean;
 }
 
 export interface SessionSummary {

@@ -363,6 +363,8 @@ export function getProjectsSummary(): ProjectSummary[] {
           if (mtime > lastActivity) lastActivity = mtime;
         }
 
+        const hasMemory = fs.existsSync(path.join(projectDirPath, "memory", "MEMORY.md"));
+
         return {
           path: projectPath,
           name: extractProjectName(projectPath),
@@ -370,6 +372,7 @@ export function getProjectsSummary(): ProjectSummary[] {
           sessionCount: dbStats?.sessionCount ?? sessionFiles.length,
           totalMessages: dbStats?.totalMessages ?? 0,
           lastActivity,
+          hasMemory,
         };
       })
       .filter((project): project is ProjectSummary => project !== null)
