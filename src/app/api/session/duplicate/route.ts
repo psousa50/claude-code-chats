@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import { syncIndex } from "@/lib/search-db";
 
 export const dynamic = "force-dynamic";
 
@@ -176,6 +177,7 @@ export async function POST(request: NextRequest) {
 
     const destFile = path.join(projectDir, `${newSessionId}.jsonl`);
     writeJsonlFile(destFile, duplicatedMessages);
+    syncIndex();
 
     return NextResponse.json({
       success: true,
