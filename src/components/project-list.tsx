@@ -1,21 +1,56 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ProjectSummary } from "@/lib/types";
 import { ProjectCard } from "./project-card";
 import { SearchInput } from "./search-input";
 
 type SortOption = "recent" | "name" | "messages" | "sessions";
 
-interface ProjectListProps {
-  projects: ProjectSummary[];
+let cachedProjects: ProjectSummary[] | null = null;
+
+function ProjectListSkeleton() {
+  return (
+    <div className="grid gap-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div
+          key={i}
+          className="p-4 bg-neutral-900/50 border border-neutral-800 rounded-lg"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="h-5 w-40 bg-neutral-800 rounded animate-pulse" />
+              <div className="h-3 w-64 bg-neutral-800/50 rounded animate-pulse mt-2" />
+            </div>
+          </div>
+          <div className="flex items-center gap-4 mt-3">
+            <div className="h-3 w-20 bg-neutral-800/50 rounded animate-pulse" />
+            <div className="h-3 w-24 bg-neutral-800/50 rounded animate-pulse" />
+            <div className="h-3 w-16 bg-neutral-800/50 rounded animate-pulse ml-auto" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
-export function ProjectList({ projects }: ProjectListProps) {
+export function ProjectList() {
+  const [projects, setProjects] = useState<ProjectSummary[] | null>(cachedProjects);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortOption>("recent");
 
+  useEffect(() => {
+    fetch("/api/projects")
+      .then((res) => res.json())
+      .then((data: ProjectSummary[]) => {
+        cachedProjects = data;
+        setProjects(data);
+      });
+  }, []);
+
   const filteredProjects = useMemo(() => {
+    if (!projects) return [];
+
     let filtered = projects;
 
     if (search.trim()) {
@@ -64,7 +99,9 @@ export function ProjectList({ projects }: ProjectListProps) {
         </select>
       </div>
 
-      {filteredProjects.length === 0 ? (
+      {projects === null ? (
+        <ProjectListSkeleton />
+      ) : filteredProjects.length === 0 ? (
         <div className="text-center py-12 text-neutral-500">
           {search ? "No projects found matching your search" : "No projects found"}
         </div>
@@ -76,9 +113,11 @@ export function ProjectList({ projects }: ProjectListProps) {
         </div>
       )}
 
-      <div className="mt-4 text-xs text-neutral-600 text-center">
-        {filteredProjects.length} of {projects.length} projects
-      </div>
+      {projects !== null && (
+        <div className="mt-4 text-xs text-neutral-600 text-center">
+          {filteredProjects.length} of {projects.length} projects
+        </div>
+      )}
     </div>
   );
 }

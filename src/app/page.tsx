@@ -1,12 +1,7 @@
-import { getProjectsSummary } from "@/lib/chat-reader";
 import { ProjectList } from "@/components/project-list";
 import { GlobalSearch } from "@/components/global-search";
 
-export const dynamic = "force-dynamic";
-
 export default function Home() {
-  const projects = getProjectsSummary();
-
   return (
     <div className="min-h-screen">
       <header className="border-b border-neutral-800 bg-neutral-900/50 backdrop-blur-sm sticky top-0 z-10">
@@ -31,7 +26,7 @@ export default function Home() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
-        <ProjectList projects={projects} />
+        <ProjectList />
       </main>
     </div>
   );

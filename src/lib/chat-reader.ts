@@ -64,10 +64,16 @@ function tryGlobDecode(parts: string[]): string | null {
   return null;
 }
 
+const decodedPathCache = new Map<string, string>();
+
 export function decodeProjectPath(encodedPath: string): string {
+  const cached = decodedPathCache.get(encodedPath);
+  if (cached !== undefined) return cached;
+
   const simpleDecode = encodedPath.replace(/-/g, "/");
 
   if (fs.existsSync(simpleDecode)) {
+    decodedPathCache.set(encodedPath, simpleDecode);
     return simpleDecode;
   }
 
@@ -75,14 +81,17 @@ export function decodeProjectPath(encodedPath: string): string {
 
   const recursiveResult = tryRecursiveDecode(parts);
   if (recursiveResult && fs.existsSync(recursiveResult)) {
+    decodedPathCache.set(encodedPath, recursiveResult);
     return recursiveResult;
   }
 
   const globResult = tryGlobDecode(parts);
   if (globResult) {
+    decodedPathCache.set(encodedPath, globResult);
     return globResult;
   }
 
+  decodedPathCache.set(encodedPath, simpleDecode);
   return simpleDecode;
 }
 
@@ -331,6 +340,12 @@ export function getProjectsSummary(): ProjectSummary[] {
           return null;
         }
 
+        const projectPath = decodeProjectPath(dir);
+
+        if (!fs.existsSync(projectPath) || isTempPath(projectPath)) {
+          return null;
+        }
+
         const sessionFiles = getValidSessionFiles(projectDirPath);
         if (sessionFiles.length === 0) {
           return null;
@@ -353,12 +368,6 @@ export function getProjectsSummary(): ProjectSummary[] {
         }
 
         if (totalMessages === 0) {
-          return null;
-        }
-
-        const projectPath = decodeProjectPath(dir);
-
-        if (!fs.existsSync(projectPath) || isTempPath(projectPath)) {
           return null;
         }
 
@@ -398,8 +407,32 @@ function parseFirstLines(filePath: string, maxLines: number): ChatMessage[] {
 }
 
 function countVisibleMessages(filePath: string): number {
-  const messages = parseJsonlFile(filePath);
-  return messages.filter((m) => !isSystemMsg(m) && !hasNoVisibleContent(m)).length;
+  try {
+    const content = fs.readFileSync(filePath, "utf-8");
+    let count = 0;
+    let start = 0;
+
+    while (start < content.length) {
+      const end = content.indexOf("\n", start);
+      const line = end === -1 ? content.slice(start) : content.slice(start, end);
+      start = end === -1 ? content.length : end + 1;
+
+      if (!line.trim()) continue;
+
+      try {
+        const msg = JSON.parse(line) as ChatMessage;
+        if ((msg.type === "user" || msg.type === "assistant") && !isSystemMsg(msg) && !hasNoVisibleContent(msg)) {
+          count++;
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    return count;
+  } catch {
+    return 0;
+  }
 }
 
 export function getSessionsSummary(encodedPath: string): SessionSummary[] {
