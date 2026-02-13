@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { SessionSummary } from "@/lib/types";
 import { SessionCard } from "./session-card";
 import { SearchInput } from "./search-input";
+
+const PAGE_SIZE = 30;
 
 interface SessionListProps {
   sessions: SessionSummary[];
@@ -13,6 +15,11 @@ interface SessionListProps {
 export function SessionList({ sessions, encodedPath }: SessionListProps) {
   const [search, setSearch] = useState("");
   const [hideShort, setHideShort] = useState(true);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [sessions]);
 
   const shortCount = useMemo(() => sessions.filter((s) => s.messageCount < 3).length, [sessions]);
 
@@ -35,13 +42,26 @@ export function SessionList({ sessions, encodedPath }: SessionListProps) {
     return filtered;
   }, [sessions, search, hideShort]);
 
+  const paginatedSessions = filteredSessions.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredSessions.length;
+
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    setVisibleCount(PAGE_SIZE);
+  }
+
+  function handleHideShortChange(value: boolean) {
+    setHideShort(value);
+    setVisibleCount(PAGE_SIZE);
+  }
+
   return (
     <div>
       <div className="mb-6 flex items-center gap-4">
         <div className="flex-1">
           <SearchInput
             value={search}
-            onChange={setSearch}
+            onChange={handleSearchChange}
             placeholder="Search sessions..."
           />
         </div>
@@ -50,7 +70,7 @@ export function SessionList({ sessions, encodedPath }: SessionListProps) {
             <input
               type="checkbox"
               checked={hideShort}
-              onChange={(e) => setHideShort(e.target.checked)}
+              onChange={(e) => handleHideShortChange(e.target.checked)}
               className="rounded border-neutral-600 bg-neutral-800"
             />
             Hide short ({shortCount})
@@ -64,14 +84,22 @@ export function SessionList({ sessions, encodedPath }: SessionListProps) {
         </div>
       ) : (
         <div className="grid gap-3">
-          {filteredSessions.map((session) => (
+          {paginatedSessions.map((session) => (
             <SessionCard key={session.id} session={session} encodedPath={encodedPath} />
           ))}
         </div>
       )}
 
-      <div className="mt-4 text-xs text-neutral-600 text-center">
-        {filteredSessions.length} of {sessions.length} sessions
+      <div className="mt-4 flex items-center justify-center gap-4 text-xs text-neutral-600">
+        <span>Showing {paginatedSessions.length} of {filteredSessions.length} sessions</span>
+        {hasMore && (
+          <button
+            onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+            className="px-3 py-1.5 text-amber-500 hover:text-amber-400 hover:bg-amber-500/10 border border-amber-500/30 rounded-lg transition-colors"
+          >
+            Load more
+          </button>
+        )}
       </div>
     </div>
   );
