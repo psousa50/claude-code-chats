@@ -18,59 +18,62 @@ function getDb(): Database.Database {
   return db;
 }
 
+const migrations: ((db: Database.Database) => void)[] = [
+  // v1: initial schema
+  (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS indexed_files (
+        path TEXT PRIMARY KEY,
+        mtime INTEGER NOT NULL,
+        session_id TEXT NOT NULL,
+        project_path TEXT NOT NULL
+      );
+
+      CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
+        content,
+        session_id,
+        project_path,
+        message_uuid,
+        user_type,
+        timestamp
+      );
+
+      CREATE TABLE IF NOT EXISTS summaries (
+        id TEXT PRIMARY KEY,
+        type TEXT NOT NULL,
+        target_id TEXT NOT NULL,
+        project_path TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        message_count INTEGER NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_summaries_lookup
+        ON summaries(type, target_id, project_path);
+    `);
+  },
+  // v2: add visible_message_count + first_message, reindex
+  (db) => {
+    db.exec("ALTER TABLE indexed_files ADD COLUMN visible_message_count INTEGER NOT NULL DEFAULT 0");
+    db.exec("ALTER TABLE indexed_files ADD COLUMN first_message TEXT NOT NULL DEFAULT ''");
+    db.exec("DELETE FROM indexed_files");
+    db.exec("DELETE FROM messages_fts");
+  },
+];
+
+function runMigrations(database: Database.Database): void {
+  const currentVersion = (database.pragma("user_version", { simple: true }) as number) ?? 0;
+
+  for (let i = currentVersion; i < migrations.length; i++) {
+    database.transaction(() => {
+      migrations[i](database);
+      database.pragma(`user_version = ${i + 1}`);
+    })();
+  }
+}
+
 function initDatabase(database: Database.Database): void {
-  database.exec(`
-    CREATE TABLE IF NOT EXISTS indexed_files (
-      path TEXT PRIMARY KEY,
-      mtime INTEGER NOT NULL,
-      session_id TEXT NOT NULL,
-      project_path TEXT NOT NULL,
-      visible_message_count INTEGER NOT NULL DEFAULT 0,
-      first_message TEXT NOT NULL DEFAULT ''
-    );
-
-    CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
-      content,
-      session_id,
-      project_path,
-      message_uuid,
-      user_type,
-      timestamp
-    );
-
-    CREATE TABLE IF NOT EXISTS summaries (
-      id TEXT PRIMARY KEY,
-      type TEXT NOT NULL,
-      target_id TEXT NOT NULL,
-      project_path TEXT NOT NULL,
-      content TEXT NOT NULL,
-      created_at INTEGER NOT NULL,
-      message_count INTEGER NOT NULL
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_summaries_lookup
-      ON summaries(type, target_id, project_path);
-  `);
-
-  const migrations = [
-    "ALTER TABLE indexed_files ADD COLUMN visible_message_count INTEGER NOT NULL DEFAULT 0",
-    "ALTER TABLE indexed_files ADD COLUMN first_message TEXT NOT NULL DEFAULT ''",
-  ];
-
-  let needsReindex = false;
-  for (const migration of migrations) {
-    try {
-      database.exec(migration);
-      needsReindex = true;
-    } catch {
-      // Column already exists
-    }
-  }
-
-  if (needsReindex) {
-    database.exec("DELETE FROM indexed_files");
-    database.exec("DELETE FROM messages_fts");
-  }
+  runMigrations(database);
 }
 
 function extractTextFromContent(content: ChatMessage["message"]["content"]): string {
