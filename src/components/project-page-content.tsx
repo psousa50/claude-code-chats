@@ -38,12 +38,15 @@ export function ProjectPageContent({ encodedPath }: { encodedPath: string }) {
   const [data, setData] = useState<ProjectData | null>(cache.get(encodedPath) ?? null);
 
   useEffect(() => {
+    let cancelled = false;
     fetch(`/api/projects/sessions?path=${encodeURIComponent(encodedPath)}`)
       .then((res) => res.json())
       .then((d: ProjectData) => {
+        if (cancelled) return;
         cache.set(encodedPath, d);
         setData(d);
       });
+    return () => { cancelled = true; };
   }, [encodedPath]);
 
   const totalMessages = data?.sessions.reduce((sum, s) => sum + s.messageCount, 0) ?? 0;

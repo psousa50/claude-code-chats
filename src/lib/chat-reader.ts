@@ -3,7 +3,7 @@ import path from "path";
 import { execSync } from "child_process";
 import { ChatMessage, ChatSession, Project, ProjectSummary, SessionSummary, TokenUsage } from "./types";
 import { isSystemMessage as isSystemMsg, hasNoVisibleContent } from "./message-utils";
-import { getProjectStats } from "./search-db";
+import { getProjectStats, getSessionSummariesFromDb } from "./search-db";
 
 const CLAUDE_DIR = path.join(process.env.HOME || "", ".claude");
 const PROJECTS_DIR = path.join(CLAUDE_DIR, "projects");
@@ -428,6 +428,11 @@ function countVisibleMessages(filePath: string): number {
 }
 
 export function getSessionsSummary(encodedPath: string): SessionSummary[] {
+  const dbSessions = getSessionSummariesFromDb(encodedPath);
+  if (dbSessions.length > 0) {
+    return dbSessions.map((s) => ({ ...s, encodedPath }));
+  }
+
   const projectDirPath = path.join(PROJECTS_DIR, encodedPath);
 
   try {

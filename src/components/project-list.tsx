@@ -40,12 +40,15 @@ export function ProjectList() {
   const [sort, setSort] = useState<SortOption>("recent");
 
   useEffect(() => {
+    let cancelled = false;
     fetch("/api/projects")
       .then((res) => res.json())
       .then((data: ProjectSummary[]) => {
+        if (cancelled) return;
         cachedProjects = data;
         setProjects(data);
       });
+    return () => { cancelled = true; };
   }, []);
 
   const filteredProjects = useMemo(() => {

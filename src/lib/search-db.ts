@@ -25,7 +25,8 @@ function initDatabase(database: Database.Database): void {
       mtime INTEGER NOT NULL,
       session_id TEXT NOT NULL,
       project_path TEXT NOT NULL,
-      visible_message_count INTEGER NOT NULL DEFAULT 0
+      visible_message_count INTEGER NOT NULL DEFAULT 0,
+      first_message TEXT NOT NULL DEFAULT ''
     );
 
     CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
@@ -51,12 +52,24 @@ function initDatabase(database: Database.Database): void {
       ON summaries(type, target_id, project_path);
   `);
 
-  try {
-    database.exec("ALTER TABLE indexed_files ADD COLUMN visible_message_count INTEGER NOT NULL DEFAULT 0");
+  const migrations = [
+    "ALTER TABLE indexed_files ADD COLUMN visible_message_count INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE indexed_files ADD COLUMN first_message TEXT NOT NULL DEFAULT ''",
+  ];
+
+  let needsReindex = false;
+  for (const migration of migrations) {
+    try {
+      database.exec(migration);
+      needsReindex = true;
+    } catch {
+      // Column already exists
+    }
+  }
+
+  if (needsReindex) {
     database.exec("DELETE FROM indexed_files");
     database.exec("DELETE FROM messages_fts");
-  } catch {
-    // Column already exists
   }
 }
 
@@ -160,6 +173,7 @@ function indexFile(database: Database.Database, fileInfo: FileInfo): void {
   `);
 
   let visibleCount = 0;
+  let firstMessage = "";
   for (const message of messages) {
     if (isSystemMessage(message)) continue;
 
@@ -167,6 +181,9 @@ function indexFile(database: Database.Database, fileInfo: FileInfo): void {
     if (!content.trim()) continue;
 
     visibleCount++;
+    if (!firstMessage && message.type === "user") {
+      firstMessage = content.slice(0, 500);
+    }
     insertMessage.run(
       content,
       fileInfo.sessionId,
@@ -178,11 +195,11 @@ function indexFile(database: Database.Database, fileInfo: FileInfo): void {
   }
 
   const upsertFile = database.prepare(`
-    INSERT OR REPLACE INTO indexed_files (path, mtime, session_id, project_path, visible_message_count)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT OR REPLACE INTO indexed_files (path, mtime, session_id, project_path, visible_message_count, first_message)
+    VALUES (?, ?, ?, ?, ?, ?)
   `);
 
-  upsertFile.run(fileInfo.path, fileInfo.mtime, fileInfo.sessionId, fileInfo.encodedPath, visibleCount);
+  upsertFile.run(fileInfo.path, fileInfo.mtime, fileInfo.sessionId, fileInfo.encodedPath, visibleCount, firstMessage);
 }
 
 function removeFileFromIndex(database: Database.Database, filePath: string): void {
@@ -427,6 +444,33 @@ export function getSessionSummaries(projectPath: string): AISummary[] {
     content: row.content,
     createdAt: row.created_at,
     messageCount: row.message_count,
+  }));
+}
+
+export function getSessionSummariesFromDb(encodedPath: string): {
+  id: string;
+  firstMessage: string;
+  messageCount: number;
+  lastActivity: number;
+}[] {
+  const database = getDb();
+  const rows = database.prepare(`
+    SELECT session_id, first_message, visible_message_count, mtime
+    FROM indexed_files
+    WHERE project_path = ? AND visible_message_count > 0 AND first_message != ''
+    ORDER BY mtime DESC
+  `).all(encodedPath) as {
+    session_id: string;
+    first_message: string;
+    visible_message_count: number;
+    mtime: number;
+  }[];
+
+  return rows.map((row) => ({
+    id: row.session_id,
+    firstMessage: row.first_message,
+    messageCount: row.visible_message_count,
+    lastActivity: row.mtime,
   }));
 }
 
