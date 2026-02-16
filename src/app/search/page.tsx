@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { GlobalSearch } from "@/components/global-search";
+import { SyncButton } from "@/components/sync-button";
 import { SearchResults } from "./search-results";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +31,7 @@ export default async function SearchPage({ searchParams }: Props) {
             <div className="flex-1">
               <GlobalSearch projectPath={project} />
             </div>
+            <SyncButton />
           </div>
         </div>
       </header>

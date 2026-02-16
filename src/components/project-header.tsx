@@ -6,6 +6,7 @@ import Link from "next/link";
 import { GlobalSearch } from "./global-search";
 import { RenameProjectModal } from "./rename-project-modal";
 import { MemoryViewer } from "./memory-viewer";
+import { SyncButton } from "./sync-button";
 
 interface ProjectHeaderProps {
   projectName: string;
@@ -63,6 +64,7 @@ export function ProjectHeader({ projectName, projectPath, encodedPath, hasMemory
             <div className="flex-1 max-w-md">
               <GlobalSearch projectPath={encodedPath} />
             </div>
+            <SyncButton />
           </div>
         </div>
       </header>

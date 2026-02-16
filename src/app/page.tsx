@@ -1,5 +1,6 @@
 import { ProjectList } from "@/components/project-list";
 import { GlobalSearch } from "@/components/global-search";
+import { SyncButton } from "@/components/sync-button";
 
 export default function Home() {
   return (
@@ -21,6 +22,7 @@ export default function Home() {
             <div className="flex-1 max-w-md">
               <GlobalSearch />
             </div>
+            <SyncButton />
           </div>
         </div>
       </header>
