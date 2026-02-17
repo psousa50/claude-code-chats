@@ -155,16 +155,33 @@ export async function POST(request: NextRequest) {
     }
 
     const newSessionId = crypto.randomUUID();
-    const oldToNewUuid = new Map<string, string>();
 
+    const originalParentMap = new Map<string, string | null>();
+    for (const msg of messages) {
+      originalParentMap.set(msg.uuid, msg.parentUuid);
+    }
+
+    const survivingUuids = new Set(messagesToDuplicate.map((m) => m.uuid));
+
+    function findSurvivingParent(uuid: string | null): string | null {
+      let current = uuid;
+      while (current !== null) {
+        if (survivingUuids.has(current)) return current;
+        current = originalParentMap.get(current) ?? null;
+      }
+      return null;
+    }
+
+    const oldToNewUuid = new Map<string, string>();
     for (const msg of messagesToDuplicate) {
       oldToNewUuid.set(msg.uuid, crypto.randomUUID());
     }
 
     const duplicatedMessages = messagesToDuplicate.map((msg) => {
       const newUuid = oldToNewUuid.get(msg.uuid)!;
-      const newParentUuid = msg.parentUuid
-        ? oldToNewUuid.get(msg.parentUuid) ?? null
+      const survivingParent = findSurvivingParent(msg.parentUuid);
+      const newParentUuid = survivingParent
+        ? oldToNewUuid.get(survivingParent) ?? null
         : null;
 
       return {
