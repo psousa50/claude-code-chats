@@ -18,6 +18,8 @@ function findClaudeExecutable(): string {
 const claudeExecutable = findClaudeExecutable();
 
 async function invokeClaude(prompt: string): Promise<ClaudeResponse> {
+  const stderrChunks: string[] = [];
+
   try {
     let result = "";
 
@@ -27,6 +29,7 @@ async function invokeClaude(prompt: string): Promise<ClaudeResponse> {
         allowedTools: [],
         maxTurns: 1,
         pathToClaudeCodeExecutable: claudeExecutable,
+        stderr: (data: string) => stderrChunks.push(data),
       },
     })) {
       if ("result" in message) {
@@ -40,11 +43,11 @@ async function invokeClaude(prompt: string): Promise<ClaudeResponse> {
 
     return { success: true, output: result.trim() };
   } catch (error) {
-    return {
-      success: false,
-      output: "",
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
+    const stderr = stderrChunks.join("").trim();
+    const message = error instanceof Error ? error.message : "Unknown error";
+    const detail = stderr ? `${message} — stderr: ${stderr}` : message;
+    console.error("[claude-cli]", detail);
+    return { success: false, output: "", error: detail };
   }
 }
 
