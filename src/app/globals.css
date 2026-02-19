@@ -50,6 +50,10 @@
   --info: 55 115 165;
 }
 
+/* ── Font size ────────────────────────────────── */
+:root[data-font-size="small"] { font-size: 14px; }
+:root[data-font-size="large"] { font-size: 18px; }
+
 /* ── Body ──────────────────────────────────────── */
 body {
   background-color: rgb(var(--bg-base));

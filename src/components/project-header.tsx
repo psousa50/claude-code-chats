@@ -8,6 +8,7 @@ import { RenameProjectModal } from "./rename-project-modal";
 import { MemoryViewer } from "./memory-viewer";
 import { SyncButton } from "./sync-button";
 import { ThemeToggle } from "./theme-toggle";
+import { FontSizeToggle } from "./font-size-toggle";
 
 interface ProjectHeaderProps {
   projectName: string;
@@ -65,6 +66,7 @@ export function ProjectHeader({ projectName, projectPath, encodedPath, hasMemory
             <div className="flex-1 max-w-md">
               <GlobalSearch projectPath={encodedPath} />
             </div>
+            <FontSizeToggle />
             <ThemeToggle />
             <SyncButton />
           </div>

@@ -2,6 +2,7 @@ import { ProjectList } from "@/components/project-list";
 import { GlobalSearch } from "@/components/global-search";
 import { SyncButton } from "@/components/sync-button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { FontSizeToggle } from "@/components/font-size-toggle";
 
 export default function Home() {
   return (
@@ -23,6 +24,7 @@ export default function Home() {
             <div className="flex-1 max-w-md">
               <GlobalSearch />
             </div>
+            <FontSizeToggle />
             <ThemeToggle />
             <SyncButton />
           </div>

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getSessionById } from "@/lib/chat-reader";
 import { GlobalSearch } from "@/components/global-search";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { FontSizeToggle } from "@/components/font-size-toggle";
 import { SyncButton } from "@/components/sync-button";
 import { SessionContent } from "@/components/session-content";
 import { isSystemMessage, hasNoVisibleContent } from "@/lib/message-utils";
@@ -48,6 +49,7 @@ export default async function SessionPage({ params, searchParams }: Props) {
             <div className="flex-1 max-w-md">
               <GlobalSearch projectPath={projectPath} />
             </div>
+            <FontSizeToggle />
             <ThemeToggle />
             <SyncButton />
           </div>
