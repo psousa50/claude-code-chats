@@ -41,14 +41,23 @@ export function ProjectList() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/projects")
-      .then((res) => res.json())
-      .then((data: ProjectSummary[]) => {
-        if (cancelled) return;
-        cachedProjects = data;
-        setProjects(data);
-      });
-    return () => { cancelled = true; };
+
+    function loadProjects() {
+      fetch("/api/projects")
+        .then((res) => res.json())
+        .then((data: ProjectSummary[]) => {
+          if (cancelled) return;
+          cachedProjects = data;
+          setProjects(data);
+        });
+    }
+
+    loadProjects();
+    window.addEventListener("sync-complete", loadProjects);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("sync-complete", loadProjects);
+    };
   }, []);
 
   const filteredProjects = useMemo(() => {

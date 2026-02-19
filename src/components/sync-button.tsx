@@ -22,6 +22,7 @@ export function SyncButton() {
 
       const data = await response.json();
       setResult(data.sync);
+      window.dispatchEvent(new Event("sync-complete"));
 
       setTimeout(() => setResult(null), 3000);
     } catch (error) {

@@ -1,6 +1,6 @@
 {
   "name": "cc-chats",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Browse and search your Claude Code chat history",
   "license": "MIT",
   "keywords": ["claude", "claude-code", "chat", "history", "browser"],

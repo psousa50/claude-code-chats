@@ -40,14 +40,23 @@ export function ProjectPageContent({ encodedPath }: { encodedPath: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/projects/sessions?path=${encodeURIComponent(encodedPath)}`)
-      .then((res) => res.json())
-      .then((d: ProjectData) => {
-        if (cancelled) return;
-        cache.set(encodedPath, d);
-        setData(d);
-      });
-    return () => { cancelled = true; };
+
+    function loadSessions() {
+      fetch(`/api/projects/sessions?path=${encodeURIComponent(encodedPath)}`)
+        .then((res) => res.json())
+        .then((d: ProjectData) => {
+          if (cancelled) return;
+          cache.set(encodedPath, d);
+          setData(d);
+        });
+    }
+
+    loadSessions();
+    window.addEventListener("sync-complete", loadSessions);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("sync-complete", loadSessions);
+    };
   }, [encodedPath]);
 
   const totalMessages = data?.sessions.reduce((sum, s) => sum + s.messageCount, 0) ?? 0;
