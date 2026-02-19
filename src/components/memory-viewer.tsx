@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 interface MemoryFile {
   name: string;
@@ -15,7 +16,6 @@ interface MemoryViewerProps {
 export function MemoryViewer({ encodedPath, onClose }: MemoryViewerProps) {
   const [files, setFiles] = useState<MemoryFile[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const backdropRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch(`/api/projects/memory?path=${encodeURIComponent(encodedPath)}`)
@@ -35,20 +35,18 @@ export function MemoryViewer({ encodedPath, onClose }: MemoryViewerProps) {
     return () => document.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
-  return (
-    <div
-      ref={backdropRef}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade"
-      onClick={(e) => {
-        if (e.target === backdropRef.current) onClose();
-      }}
-    >
-      <div className="bg-surface-elevated border border-edge rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl mx-4 animate-modal">
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade"
+        onClick={onClose}
+      />
+      <div className="relative bg-surface-elevated border border-edge rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl mx-4 animate-modal">
         <div className="flex items-center justify-between px-5 py-4 border-b border-edge-subtle">
           <h2 className="text-sm font-serif text-content-primary">Project Memory</h2>
           <button
             onClick={onClose}
-            className="text-content-tertiary hover:text-content-primary transition-colors"
+            className="p-1.5 -mr-1.5 text-content-tertiary hover:text-content-primary hover:bg-surface rounded-lg transition-all"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -74,6 +72,7 @@ export function MemoryViewer({ encodedPath, onClose }: MemoryViewerProps) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
