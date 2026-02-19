@@ -1,43 +1,43 @@
-"use client";
+'use client'
 
-import { useState, useCallback, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 interface GlobalSearchProps {
-  projectPath?: string;
+  projectPath?: string
 }
 
 export function GlobalSearch({ projectPath }: GlobalSearchProps) {
-  const [query, setQuery] = useState("");
-  const router = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [query, setQuery] = useState('')
+  const router = useRouter()
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        inputRef.current?.focus();
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        inputRef.current?.focus()
       }
     }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, []);
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [])
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
-      e.preventDefault();
+      e.preventDefault()
       if (query.trim()) {
-        const params = new URLSearchParams({ q: query.trim() });
+        const params = new URLSearchParams({ q: query.trim() })
         if (projectPath) {
-          params.set("project", projectPath);
+          params.set('project', projectPath)
         }
-        router.push(`/search?${params.toString()}`);
+        router.push(`/search?${params.toString()}`)
       }
     },
-    [query, router, projectPath]
-  );
+    [query, router, projectPath],
+  )
 
-  const placeholder = projectPath ? "Search this project..." : "Search all chats...";
+  const placeholder = projectPath ? 'Search this project...' : 'Search all chats...'
 
   return (
     <form onSubmit={handleSubmit} className="relative">
@@ -68,5 +68,5 @@ export function GlobalSearch({ projectPath }: GlobalSearchProps) {
         </kbd>
       )}
     </form>
-  );
+  )
 }

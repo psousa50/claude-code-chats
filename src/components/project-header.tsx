@@ -1,30 +1,35 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { GlobalSearch } from "./global-search";
-import { RenameProjectModal } from "./rename-project-modal";
-import { MemoryViewer } from "./memory-viewer";
-import { SyncButton } from "./sync-button";
-import { ThemeToggle } from "./theme-toggle";
-import { FontSizeToggle } from "./font-size-toggle";
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { GlobalSearch } from './global-search'
+import { RenameProjectModal } from './rename-project-modal'
+import { MemoryViewer } from './memory-viewer'
+import { SyncButton } from './sync-button'
+import { ThemeToggle } from './theme-toggle'
+import { FontSizeToggle } from './font-size-toggle'
 
 interface ProjectHeaderProps {
-  projectName: string;
-  projectPath: string;
-  encodedPath: string;
-  hasMemory: boolean;
+  projectName: string
+  projectPath: string
+  encodedPath: string
+  hasMemory: boolean
 }
 
-export function ProjectHeader({ projectName, projectPath, encodedPath, hasMemory }: ProjectHeaderProps) {
-  const [isRenameOpen, setIsRenameOpen] = useState(false);
-  const [showMemory, setShowMemory] = useState(false);
-  const router = useRouter();
+export function ProjectHeader({
+  projectName,
+  projectPath,
+  encodedPath,
+  hasMemory,
+}: ProjectHeaderProps) {
+  const [isRenameOpen, setIsRenameOpen] = useState(false)
+  const [showMemory, setShowMemory] = useState(false)
+  const router = useRouter()
 
   function handleRenameSuccess(newEncodedPath: string) {
-    setIsRenameOpen(false);
-    router.replace(`/project/${newEncodedPath}`);
+    setIsRenameOpen(false)
+    router.replace(`/project/${newEncodedPath}`)
   }
 
   return (
@@ -37,7 +42,12 @@ export function ProjectHeader({ projectName, projectPath, encodedPath, hasMemory
               className="p-2 -ml-2 text-content-tertiary hover:text-content-primary hover:bg-surface-elevated rounded-lg transition-all flex-shrink-0"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
             </Link>
             <div className="flex-1 min-w-0 hidden sm:block">
@@ -50,8 +60,18 @@ export function ProjectHeader({ projectName, projectPath, encodedPath, hasMemory
                   onClick={() => setShowMemory(true)}
                   className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-accent hover:text-accent-hover hover:bg-accent/10 border border-accent/20 rounded-lg transition-all"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                    />
                   </svg>
                   Memory
                 </button>
@@ -82,11 +102,8 @@ export function ProjectHeader({ projectName, projectPath, encodedPath, hasMemory
       />
 
       {showMemory && (
-        <MemoryViewer
-          encodedPath={encodedPath}
-          onClose={() => setShowMemory(false)}
-        />
+        <MemoryViewer encodedPath={encodedPath} onClose={() => setShowMemory(false)} />
       )}
     </>
-  );
+  )
 }

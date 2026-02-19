@@ -1,20 +1,20 @@
-import Link from "next/link";
-import { GlobalSearch } from "@/components/global-search";
-import { SyncButton } from "@/components/sync-button";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { SearchResults } from "./search-results";
+import Link from 'next/link'
+import { GlobalSearch } from '@/components/global-search'
+import { SyncButton } from '@/components/sync-button'
+import { ThemeToggle } from '@/components/theme-toggle'
+import { SearchResults } from './search-results'
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic'
 
 interface Props {
-  searchParams: Promise<{ q?: string; project?: string }>;
+  searchParams: Promise<{ q?: string; project?: string }>
 }
 
 export default async function SearchPage({ searchParams }: Props) {
-  const { q, project } = await searchParams;
-  const query = q || "";
+  const { q, project } = await searchParams
+  const query = q || ''
 
-  const backHref = project ? `/project/${project}` : "/";
+  const backHref = project ? `/project/${project}` : '/'
 
   return (
     <div className="min-h-screen">
@@ -26,7 +26,12 @@ export default async function SearchPage({ searchParams }: Props) {
               className="p-2 -ml-2 text-content-tertiary hover:text-content-primary hover:bg-surface-elevated rounded-lg transition-all"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
             </Link>
             <div className="flex-1">
@@ -42,5 +47,5 @@ export default async function SearchPage({ searchParams }: Props) {
         <SearchResults query={query} projectPath={project} />
       </main>
     </div>
-  );
+  )
 }

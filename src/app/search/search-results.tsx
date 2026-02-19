@@ -1,72 +1,72 @@
-"use client";
+'use client'
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { formatRelativeTime } from "@/lib/format";
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { formatRelativeTime } from '@/lib/format'
 
 interface SearchResult {
-  content: string;
-  sessionId: string;
-  projectPath: string;
-  projectName: string;
-  messageUuid: string;
-  userType: string;
-  timestamp: number;
-  snippet: string;
-  rank: number;
+  content: string
+  sessionId: string
+  projectPath: string
+  projectName: string
+  messageUuid: string
+  userType: string
+  timestamp: number
+  snippet: string
+  rank: number
 }
 
 interface SearchResponse {
-  results: SearchResult[];
-  sync: { added: number; updated: number; removed: number };
-  stats: { fileCount: number; messageCount: number };
+  results: SearchResult[]
+  sync: { added: number; updated: number; removed: number }
+  stats: { fileCount: number; messageCount: number }
 }
 
 interface SearchResultsProps {
-  query: string;
-  projectPath?: string;
+  query: string
+  projectPath?: string
 }
 
 export function SearchResults({ query, projectPath }: SearchResultsProps) {
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [stats, setStats] = useState<{ fileCount: number; messageCount: number } | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [results, setResults] = useState<SearchResult[]>([])
+  const [stats, setStats] = useState<{ fileCount: number; messageCount: number } | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!query.trim()) {
-      setResults([]);
-      return;
+      setResults([])
+      return
     }
 
     const fetchResults = async () => {
-      setLoading(true);
-      setError(null);
+      setLoading(true)
+      setError(null)
 
       try {
-        const params = new URLSearchParams({ q: query });
+        const params = new URLSearchParams({ q: query })
         if (projectPath) {
-          params.set("project", projectPath);
+          params.set('project', projectPath)
         }
-        const response = await fetch(`/api/search?${params.toString()}`);
+        const response = await fetch(`/api/search?${params.toString()}`)
 
         if (!response.ok) {
-          throw new Error("Search failed");
+          throw new Error('Search failed')
         }
 
-        const data: SearchResponse = await response.json();
-        setResults(data.results);
-        setStats(data.stats);
+        const data: SearchResponse = await response.json()
+        setResults(data.results)
+        setStats(data.stats)
       } catch {
-        setError("Failed to search. Please try again.");
-        setResults([]);
+        setError('Failed to search. Please try again.')
+        setResults([])
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    fetchResults();
-  }, [query, projectPath]);
+    fetchResults()
+  }, [query, projectPath])
 
   if (!query.trim()) {
     return (
@@ -85,7 +85,8 @@ export function SearchResults({ query, projectPath }: SearchResultsProps) {
           />
         </svg>
         <p className="text-content-secondary">
-          Enter a search query to find messages {projectPath ? "in this project" : "across all chats"}
+          Enter a search query to find messages{' '}
+          {projectPath ? 'in this project' : 'across all chats'}
         </p>
         {stats && (
           <p className="text-sm text-content-tertiary mt-2">
@@ -93,7 +94,7 @@ export function SearchResults({ query, projectPath }: SearchResultsProps) {
           </p>
         )}
       </div>
-    );
+    )
   }
 
   if (loading) {
@@ -102,7 +103,7 @@ export function SearchResults({ query, projectPath }: SearchResultsProps) {
         <div className="w-8 h-8 mx-auto border-2 border-edge-hover border-t-accent rounded-full animate-spin mb-4" />
         <p className="text-content-secondary">Searching...</p>
       </div>
-    );
+    )
   }
 
   if (error) {
@@ -123,7 +124,7 @@ export function SearchResults({ query, projectPath }: SearchResultsProps) {
         </svg>
         <p className="text-danger">{error}</p>
       </div>
-    );
+    )
   }
 
   if (results.length === 0) {
@@ -144,13 +145,13 @@ export function SearchResults({ query, projectPath }: SearchResultsProps) {
         </svg>
         <p className="text-content-secondary">No results found for &ldquo;{query}&rdquo;</p>
       </div>
-    );
+    )
   }
 
   return (
     <div>
       <p className="text-sm text-content-tertiary mb-4 animate-fade">
-        Found {results.length} result{results.length !== 1 ? "s" : ""} for &ldquo;{query}&rdquo;
+        Found {results.length} result{results.length !== 1 ? 's' : ''} for &ldquo;{query}&rdquo;
       </p>
 
       <div className="space-y-3">
@@ -165,9 +166,9 @@ export function SearchResults({ query, projectPath }: SearchResultsProps) {
                 <div className="flex items-center gap-2 text-sm">
                   <span
                     className={`px-2 py-0.5 rounded text-xs font-medium ${
-                      result.userType === "user"
-                        ? "bg-info/15 text-info"
-                        : "bg-accent/15 text-accent"
+                      result.userType === 'user'
+                        ? 'bg-info/15 text-info'
+                        : 'bg-accent/15 text-accent'
                     }`}
                   >
                     {result.userType}
@@ -186,11 +187,13 @@ export function SearchResults({ query, projectPath }: SearchResultsProps) {
                 dangerouslySetInnerHTML={{ __html: result.snippet }}
               />
 
-              <p className="text-[11px] text-content-tertiary mt-2 font-mono truncate opacity-50">{result.sessionId}</p>
+              <p className="text-[11px] text-content-tertiary mt-2 font-mono truncate opacity-50">
+                {result.sessionId}
+              </p>
             </Link>
-          );
+          )
         })}
       </div>
     </div>
-  );
+  )
 }

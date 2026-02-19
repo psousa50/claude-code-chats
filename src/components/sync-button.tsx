@@ -1,36 +1,36 @@
-"use client";
+'use client'
 
-import { useState } from "react";
+import { useState } from 'react'
 
 interface SyncResult {
-  added: number;
-  updated: number;
-  removed: number;
+  added: number
+  updated: number
+  removed: number
 }
 
 export function SyncButton() {
-  const [syncing, setSyncing] = useState(false);
-  const [result, setResult] = useState<SyncResult | null>(null);
+  const [syncing, setSyncing] = useState(false)
+  const [result, setResult] = useState<SyncResult | null>(null)
 
   const handleSync = async () => {
-    setSyncing(true);
-    setResult(null);
+    setSyncing(true)
+    setResult(null)
 
     try {
-      const response = await fetch("/api/sync", { method: "POST" });
-      if (!response.ok) throw new Error("Sync failed");
+      const response = await fetch('/api/sync', { method: 'POST' })
+      if (!response.ok) throw new Error('Sync failed')
 
-      const data = await response.json();
-      setResult(data.sync);
-      window.dispatchEvent(new Event("sync-complete"));
+      const data = await response.json()
+      setResult(data.sync)
+      window.dispatchEvent(new Event('sync-complete'))
 
-      setTimeout(() => setResult(null), 3000);
+      setTimeout(() => setResult(null), 3000)
     } catch (error) {
-      console.error("Sync error:", error);
+      console.error('Sync error:', error)
     } finally {
-      setSyncing(false);
+      setSyncing(false)
     }
-  };
+  }
 
   return (
     <div className="flex items-center gap-2">
@@ -41,7 +41,7 @@ export function SyncButton() {
         title="Resync database"
       >
         <svg
-          className={`w-5 h-5 ${syncing ? "animate-spin" : ""}`}
+          className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -63,5 +63,5 @@ export function SyncButton() {
         </div>
       )}
     </div>
-  );
+  )
 }

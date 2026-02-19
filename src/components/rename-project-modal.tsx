@@ -1,18 +1,18 @@
-"use client";
+'use client'
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from 'react'
 
 interface RenameProjectModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: (newEncodedPath: string) => void;
-  currentPath: string;
-  encodedPath: string;
+  isOpen: boolean
+  onClose: () => void
+  onSuccess: (newEncodedPath: string) => void
+  currentPath: string
+  encodedPath: string
 }
 
 function extractFolderName(projectPath: string): string {
-  const parts = projectPath.split("/").filter(Boolean);
-  return parts[parts.length - 1] || projectPath;
+  const parts = projectPath.split('/').filter(Boolean)
+  return parts[parts.length - 1] || projectPath
 }
 
 export function RenameProjectModal({
@@ -22,61 +22,61 @@ export function RenameProjectModal({
   currentPath,
   encodedPath,
 }: RenameProjectModalProps) {
-  const [newName, setNewName] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [newName, setNewName] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (isOpen) {
-      setNewName(extractFolderName(currentPath));
-      setError(null);
-      setTimeout(() => inputRef.current?.select(), 0);
+      setNewName(extractFolderName(currentPath))
+      setError(null)
+      setTimeout(() => inputRef.current?.select(), 0)
     }
-  }, [isOpen, currentPath]);
+  }, [isOpen, currentPath])
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && isOpen && !loading) {
-        onClose();
+      if (e.key === 'Escape' && isOpen && !loading) {
+        onClose()
       }
     }
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, loading, onClose]);
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, loading, onClose])
 
-  if (!isOpen) return null;
+  if (!isOpen) return null
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+    e.preventDefault()
 
     if (!newName.trim()) {
-      setError("Name cannot be empty.");
-      return;
+      setError('Name cannot be empty.')
+      return
     }
 
-    setLoading(true);
-    setError(null);
+    setLoading(true)
+    setError(null)
 
     try {
-      const response = await fetch("/api/project/rename", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/project/rename', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ encodedPath, newName: newName.trim() }),
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to rename project");
+        throw new Error(data.error || 'Failed to rename project')
       }
 
-      onSuccess(data.newEncodedPath);
+      onSuccess(data.newEncodedPath)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
@@ -125,15 +125,26 @@ export function RenameProjectModal({
             >
               {loading && (
                 <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
                 </svg>
               )}
-              {loading ? "Renaming..." : "Rename"}
+              {loading ? 'Renaming...' : 'Rename'}
             </button>
           </div>
         </form>
       </div>
     </div>
-  );
+  )
 }

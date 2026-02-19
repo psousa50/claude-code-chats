@@ -1,39 +1,39 @@
-"use client";
+'use client'
 
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 interface MemoryFile {
-  name: string;
-  content: string;
+  name: string
+  content: string
 }
 
 interface MemoryViewerProps {
-  encodedPath: string;
-  onClose: () => void;
+  encodedPath: string
+  onClose: () => void
 }
 
 export function MemoryViewer({ encodedPath, onClose }: MemoryViewerProps) {
-  const [files, setFiles] = useState<MemoryFile[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [files, setFiles] = useState<MemoryFile[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetch(`/api/projects/memory?path=${encodeURIComponent(encodedPath)}`)
       .then((res) => {
-        if (!res.ok) throw new Error("Failed to load");
-        return res.json();
+        if (!res.ok) throw new Error('Failed to load')
+        return res.json()
       })
       .then((data) => setFiles(data.files))
-      .catch(() => setError("Failed to load memory"));
-  }, [encodedPath]);
+      .catch(() => setError('Failed to load memory'))
+  }, [encodedPath])
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === 'Escape') onClose()
     }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [onClose]);
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [onClose])
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -49,7 +49,12 @@ export function MemoryViewer({ encodedPath, onClose }: MemoryViewerProps) {
             className="p-1.5 -mr-1.5 text-content-tertiary hover:text-content-primary hover:bg-surface rounded-lg transition-all"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -73,6 +78,6 @@ export function MemoryViewer({ encodedPath, onClose }: MemoryViewerProps) {
         </div>
       </div>
     </div>,
-    document.body
-  );
+    document.body,
+  )
 }

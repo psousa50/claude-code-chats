@@ -1,55 +1,55 @@
-import fs from "fs";
-import path from "path";
-import { ChatMessage, ContentBlock } from "../types";
+import fs from 'fs'
+import path from 'path'
+import { ChatMessage, ContentBlock } from '../types'
 
-let uuidCounter = 0;
+let uuidCounter = 0
 
 function nextUuid(): string {
-  uuidCounter++;
-  return `00000000-0000-0000-0000-${String(uuidCounter).padStart(12, "0")}`;
+  uuidCounter++
+  return `00000000-0000-0000-0000-${String(uuidCounter).padStart(12, '0')}`
 }
 
 export function resetUuidCounter(): void {
-  uuidCounter = 0;
+  uuidCounter = 0
 }
 
-const BASE_TIMESTAMP = new Date("2026-01-15T10:00:00Z").getTime();
+const BASE_TIMESTAMP = new Date('2026-01-15T10:00:00Z').getTime()
 
 export function makeChatMessage(overrides?: Partial<ChatMessage>): ChatMessage {
-  const uuid = nextUuid();
+  const uuid = nextUuid()
   return {
     parentUuid: null,
     isSidechain: false,
-    userType: "human",
-    cwd: "/tmp/test-project",
-    sessionId: "test-session-1",
-    version: "1.0.0",
-    gitBranch: "main",
-    type: "user",
+    userType: 'human',
+    cwd: '/tmp/test-project',
+    sessionId: 'test-session-1',
+    version: '1.0.0',
+    gitBranch: 'main',
+    type: 'user',
     message: {
-      role: "user",
-      content: "Hello, world!",
+      role: 'user',
+      content: 'Hello, world!',
     },
     uuid,
     timestamp: BASE_TIMESTAMP,
     ...overrides,
-  };
+  }
 }
 
 export function makeUserMessage(text: string, overrides?: Partial<ChatMessage>): ChatMessage {
   return makeChatMessage({
-    type: "user",
-    message: { role: "user", content: text },
+    type: 'user',
+    message: { role: 'user', content: text },
     ...overrides,
-  });
+  })
 }
 
 export function makeAssistantMessage(text: string, overrides?: Partial<ChatMessage>): ChatMessage {
   return makeChatMessage({
-    type: "assistant",
-    message: { role: "assistant", content: text },
+    type: 'assistant',
+    message: { role: 'assistant', content: text },
     ...overrides,
-  });
+  })
 }
 
 export function makeAssistantMessageWithBlocks(
@@ -57,18 +57,18 @@ export function makeAssistantMessageWithBlocks(
   overrides?: Partial<ChatMessage>,
 ): ChatMessage {
   return makeChatMessage({
-    type: "assistant",
-    message: { role: "assistant", content: blocks },
+    type: 'assistant',
+    message: { role: 'assistant', content: blocks },
     ...overrides,
-  });
+  })
 }
 
 export function makeSystemMessage(text: string): ChatMessage {
   return makeChatMessage({
-    type: "user",
+    type: 'user',
     isMeta: true,
-    message: { role: "user", content: text },
-  });
+    message: { role: 'user', content: text },
+  })
 }
 
 export function makeMessageWithUsage(
@@ -76,9 +76,9 @@ export function makeMessageWithUsage(
   usage: { input: number; output: number; cacheCreation?: number; cacheRead?: number },
 ): ChatMessage {
   return makeChatMessage({
-    type: "assistant",
+    type: 'assistant',
     message: {
-      role: "assistant",
+      role: 'assistant',
       content: text,
       usage: {
         input_tokens: usage.input,
@@ -87,11 +87,11 @@ export function makeMessageWithUsage(
         cache_read_input_tokens: usage.cacheRead ?? 0,
       },
     },
-  });
+  })
 }
 
 export function toJsonl(messages: ChatMessage[]): string {
-  return messages.map((m) => JSON.stringify(m)).join("\n") + "\n";
+  return messages.map((m) => JSON.stringify(m)).join('\n') + '\n'
 }
 
 export function writeTempProject(
@@ -99,12 +99,12 @@ export function writeTempProject(
   encodedPath: string,
   sessions: Record<string, string>,
 ): string {
-  const projectDir = path.join(baseDir, encodedPath);
-  fs.mkdirSync(projectDir, { recursive: true });
+  const projectDir = path.join(baseDir, encodedPath)
+  fs.mkdirSync(projectDir, { recursive: true })
 
   for (const [sessionId, content] of Object.entries(sessions)) {
-    fs.writeFileSync(path.join(projectDir, `${sessionId}.jsonl`), content, "utf-8");
+    fs.writeFileSync(path.join(projectDir, `${sessionId}.jsonl`), content, 'utf-8')
   }
 
-  return projectDir;
+  return projectDir
 }

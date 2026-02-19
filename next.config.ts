@@ -1,7 +1,7 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["fs", "path", "better-sqlite3"],
-};
+  serverExternalPackages: ['fs', 'path', 'better-sqlite3'],
+}
 
-export default nextConfig;
+export default nextConfig

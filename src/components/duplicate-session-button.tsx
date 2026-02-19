@@ -1,13 +1,13 @@
-"use client";
+'use client'
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 
 interface DuplicateSessionButtonProps {
-  encodedPath: string;
-  sessionId: string;
-  totalMessageCount: number;
-  strippedMessageCount: number;
+  encodedPath: string
+  sessionId: string
+  totalMessageCount: number
+  strippedMessageCount: number
 }
 
 export function DuplicateSessionButton({
@@ -16,77 +16,74 @@ export function DuplicateSessionButton({
   totalMessageCount,
   strippedMessageCount,
 }: DuplicateSessionButtonProps) {
-  const router = useRouter();
-  const [isOpen, setIsOpen] = useState(false);
-  const [keepLastN, setKeepLastN] = useState<string>("");
-  const [stripToolResults, setStripToolResults] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter()
+  const [isOpen, setIsOpen] = useState(false)
+  const [keepLastN, setKeepLastN] = useState<string>('')
+  const [stripToolResults, setStripToolResults] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (isOpen) {
-      setKeepLastN("");
-      setStripToolResults(false);
-      setError(null);
-      setTimeout(() => inputRef.current?.focus(), 0);
+      setKeepLastN('')
+      setStripToolResults(false)
+      setError(null)
+      setTimeout(() => inputRef.current?.focus(), 0)
     }
-  }, [isOpen]);
+  }, [isOpen])
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && isOpen && !loading) {
-        setIsOpen(false);
+      if (e.key === 'Escape' && isOpen && !loading) {
+        setIsOpen(false)
       }
     }
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, loading]);
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, loading])
 
-  const parsedKeepLastN = keepLastN ? parseInt(keepLastN, 10) : undefined;
-  const isValidKeepLastN = !keepLastN || (parsedKeepLastN && parsedKeepLastN > 0);
+  const parsedKeepLastN = keepLastN ? parseInt(keepLastN, 10) : undefined
+  const isValidKeepLastN = !keepLastN || (parsedKeepLastN && parsedKeepLastN > 0)
 
-  const baseCount = stripToolResults ? strippedMessageCount : totalMessageCount;
-  const resultingMessageCount = parsedKeepLastN
-    ? Math.min(parsedKeepLastN, baseCount)
-    : baseCount;
-  const reductionPercent = totalMessageCount > 0
-    ? Math.round((1 - resultingMessageCount / totalMessageCount) * 100)
-    : 0;
+  const baseCount = stripToolResults ? strippedMessageCount : totalMessageCount
+  const resultingMessageCount = parsedKeepLastN ? Math.min(parsedKeepLastN, baseCount) : baseCount
+  const reductionPercent =
+    totalMessageCount > 0 ? Math.round((1 - resultingMessageCount / totalMessageCount) * 100) : 0
 
   async function handleDuplicate() {
     if (!isValidKeepLastN) {
-      setError("Please enter a valid positive number.");
-      return;
+      setError('Please enter a valid positive number.')
+      return
     }
 
-    setLoading(true);
-    setError(null);
+    setLoading(true)
+    setError(null)
 
     try {
-      const response = await fetch("/api/session/duplicate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/session/duplicate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           encodedPath,
           sessionId,
           keepLastN: parsedKeepLastN,
           stripToolResults,
         }),
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to duplicate session");
+        throw new Error(data.error || 'Failed to duplicate session')
       }
 
-      router.push(`/project/${encodedPath}/session/${data.newSessionId}`);
+      router.push(`/project/${encodedPath}/session/${data.newSessionId}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
@@ -181,16 +178,27 @@ export function DuplicateSessionButton({
               >
                 {loading && (
                   <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
                   </svg>
                 )}
-                {loading ? "Duplicating..." : "Duplicate"}
+                {loading ? 'Duplicating...' : 'Duplicate'}
               </button>
             </div>
           </div>
         </div>
       )}
     </>
-  );
+  )
 }

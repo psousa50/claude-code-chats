@@ -1,13 +1,13 @@
-"use client";
+'use client'
 
-import { useState, useMemo, useEffect } from "react";
-import { ProjectSummary } from "@/lib/types";
-import { ProjectCard } from "./project-card";
-import { SearchInput } from "./search-input";
+import { useState, useMemo, useEffect } from 'react'
+import { ProjectSummary } from '@/lib/types'
+import { ProjectCard } from './project-card'
+import { SearchInput } from './search-input'
 
-type SortOption = "recent" | "name" | "messages" | "sessions";
+type SortOption = 'recent' | 'name' | 'messages' | 'sessions'
 
-let cachedProjects: ProjectSummary[] | null = null;
+let cachedProjects: ProjectSummary[] | null = null
 
 function ProjectListSkeleton() {
   return (
@@ -31,93 +31,88 @@ function ProjectListSkeleton() {
         </div>
       ))}
     </div>
-  );
+  )
 }
 
 export function ProjectList() {
-  const [projects, setProjects] = useState<ProjectSummary[] | null>(cachedProjects);
-  const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<SortOption>("recent");
-  const [hideOutsideHome, setHideOutsideHome] = useState(false);
+  const [projects, setProjects] = useState<ProjectSummary[] | null>(cachedProjects)
+  const [search, setSearch] = useState('')
+  const [sort, setSort] = useState<SortOption>('recent')
+  const [hideOutsideHome, setHideOutsideHome] = useState(false)
 
   useEffect(() => {
-    let cancelled = false;
+    let cancelled = false
 
     function loadProjects() {
-      fetch("/api/projects")
+      fetch('/api/projects')
         .then((res) => res.json())
         .then((data: ProjectSummary[]) => {
-          if (cancelled) return;
-          cachedProjects = data;
-          setProjects(data);
-        });
+          if (cancelled) return
+          cachedProjects = data
+          setProjects(data)
+        })
     }
 
-    loadProjects();
-    window.addEventListener("sync-complete", loadProjects);
+    loadProjects()
+    window.addEventListener('sync-complete', loadProjects)
     return () => {
-      cancelled = true;
-      window.removeEventListener("sync-complete", loadProjects);
-    };
-  }, []);
+      cancelled = true
+      window.removeEventListener('sync-complete', loadProjects)
+    }
+  }, [])
 
   const hasOutsideHomeProjects = useMemo(() => {
-    return projects?.some((p) => p.isOutsideHome) ?? false;
-  }, [projects]);
+    return projects?.some((p) => p.isOutsideHome) ?? false
+  }, [projects])
 
   const filteredProjects = useMemo(() => {
-    if (!projects) return [];
+    if (!projects) return []
 
-    let filtered = projects;
+    let filtered = projects
 
     if (hideOutsideHome) {
-      filtered = filtered.filter((p) => !p.isOutsideHome);
+      filtered = filtered.filter((p) => !p.isOutsideHome)
     }
 
     if (search.trim()) {
-      const searchLower = search.toLowerCase();
+      const searchLower = search.toLowerCase()
       filtered = filtered.filter(
         (p) =>
-          p.name.toLowerCase().includes(searchLower) ||
-          p.path.toLowerCase().includes(searchLower)
-      );
+          p.name.toLowerCase().includes(searchLower) || p.path.toLowerCase().includes(searchLower),
+      )
     }
 
     return [...filtered].sort((a, b) => {
       switch (sort) {
-        case "name":
-          return a.name.localeCompare(b.name);
-        case "messages":
-          return b.totalMessages - a.totalMessages;
-        case "sessions":
-          return b.sessionCount - a.sessionCount;
-        case "recent":
+        case 'name':
+          return a.name.localeCompare(b.name)
+        case 'messages':
+          return b.totalMessages - a.totalMessages
+        case 'sessions':
+          return b.sessionCount - a.sessionCount
+        case 'recent':
         default:
-          return b.lastActivity - a.lastActivity;
+          return b.lastActivity - a.lastActivity
       }
-    });
-  }, [projects, search, sort, hideOutsideHome]);
+    })
+  }, [projects, search, sort, hideOutsideHome])
 
   return (
     <div>
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="flex-1">
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder="Search projects..."
-          />
+          <SearchInput value={search} onChange={setSearch} placeholder="Search projects..." />
         </div>
         {hasOutsideHomeProjects && (
           <button
             onClick={() => setHideOutsideHome(!hideOutsideHome)}
             className={`px-3 py-2.5 border rounded-xl text-sm transition-all whitespace-nowrap ${
               hideOutsideHome
-                ? "bg-accent/10 border-accent text-accent"
-                : "bg-surface border-edge-subtle text-content-secondary hover:border-accent/50"
+                ? 'bg-accent/10 border-accent text-accent'
+                : 'bg-surface border-edge-subtle text-content-secondary hover:border-accent/50'
             }`}
           >
-            {hideOutsideHome ? "External hidden" : "Hide external"}
+            {hideOutsideHome ? 'External hidden' : 'Hide external'}
           </button>
         )}
         <select
@@ -136,7 +131,7 @@ export function ProjectList() {
         <ProjectListSkeleton />
       ) : filteredProjects.length === 0 ? (
         <div className="text-center py-16 text-content-tertiary animate-fade">
-          {search ? "No projects found matching your search" : "No projects found"}
+          {search ? 'No projects found matching your search' : 'No projects found'}
         </div>
       ) : (
         <div className="grid gap-3 lg:grid-cols-2">
@@ -154,5 +149,5 @@ export function ProjectList() {
         </div>
       )}
     </div>
-  );
+  )
 }

@@ -1,29 +1,25 @@
-import type { Metadata } from "next";
-import { DM_Sans, JetBrains_Mono } from "next/font/google";
-import { ThemeProvider } from "@/components/theme-provider";
-import { FontSizeProvider } from "@/components/font-size-provider";
-import "./globals.css";
+import type { Metadata } from 'next'
+import { DM_Sans, JetBrains_Mono } from 'next/font/google'
+import { ThemeProvider } from '@/components/theme-provider'
+import { FontSizeProvider } from '@/components/font-size-provider'
+import './globals.css'
 
 const dmSans = DM_Sans({
-  subsets: ["latin"],
-  variable: "--font-sans",
-});
+  subsets: ['latin'],
+  variable: '--font-sans',
+})
 
 const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
-});
+  subsets: ['latin'],
+  variable: '--font-mono',
+})
 
 export const metadata: Metadata = {
-  title: "Claude Code Chats",
-  description: "Browse your Claude Code chat history",
-};
+  title: 'Claude Code Chats',
+  description: 'Browse your Claude Code chat history',
+}
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -41,5 +37,5 @@ export default function RootLayout({
         </ThemeProvider>
       </body>
     </html>
-  );
+  )
 }

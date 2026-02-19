@@ -1,16 +1,12 @@
-"use client";
+'use client'
 
 interface SearchInputProps {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
 }
 
-export function SearchInput({
-  value,
-  onChange,
-  placeholder = "Search...",
-}: SearchInputProps) {
+export function SearchInput({ value, onChange, placeholder = 'Search...' }: SearchInputProps) {
   return (
     <div className="relative">
       <svg
@@ -35,14 +31,19 @@ export function SearchInput({
       />
       {value && (
         <button
-          onClick={() => onChange("")}
+          onClick={() => onChange('')}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-content-tertiary hover:text-content-secondary transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
       )}
     </div>
-  );
+  )
 }
