@@ -3,10 +3,13 @@ import path from "path";
 import { execSync } from "child_process";
 import { ChatMessage, ChatSession, Project, ProjectSummary, SessionSummary, TokenUsage } from "./types";
 import { isSystemMessage as isSystemMsg, hasNoVisibleContent } from "./message-utils";
-import { getProjectStats, getSessionSummariesFromDb } from "./search-db";
+import {
+  getProjectStats as defaultGetProjectStats,
+  getSessionSummariesFromDb as defaultGetSessionSummariesFromDb,
+} from "./search-db";
 
 const CLAUDE_DIR = path.join(process.env.HOME || "", ".claude");
-const PROJECTS_DIR = path.join(CLAUDE_DIR, "projects");
+const DEFAULT_PROJECTS_DIR = path.join(CLAUDE_DIR, "projects");
 
 function tryRecursiveDecode(parts: string[]): string | null {
   function tryDecode(index: number, currentPath: string): string | null {
@@ -186,200 +189,10 @@ function computeSessionTokens(messages: ChatMessage[]): TokenUsage | undefined {
   };
 }
 
-function getSessionsForProject(projectDir: string): ChatSession[] {
-  try {
-    const files = fs.readdirSync(projectDir);
-    const jsonlFiles = files.filter((f) =>
-      f.endsWith(".jsonl") && !f.startsWith("agent-")
-    );
-    const encodedPath = path.basename(projectDir);
-
-    return jsonlFiles
-      .map((file) => {
-        const filePath = path.join(projectDir, file);
-        const messages = parseJsonlFile(filePath);
-
-        if (messages.length === 0) {
-          return null;
-        }
-
-        const sessionId = file.replace(".jsonl", "");
-        const firstUserMessage = messages.find((m) => m.type === "user" && !isSystemMessage(m));
-        const firstMessageText = firstUserMessage
-          ? extractTextFromContent(firstUserMessage.message.content)
-          : "No messages";
-
-        const timestamps = messages
-          .map((m) => parseTimestamp(m.timestamp))
-          .filter((t) => t > 0);
-        const lastActivity =
-          timestamps.length > 0 ? Math.max(...timestamps) : 0;
-
-        const projectPath = decodeProjectPath(encodedPath);
-        const visibleCount = messages.filter((m) => !isSystemMsg(m) && !hasNoVisibleContent(m)).length;
-        const tokenUsage = computeSessionTokens(messages);
-
-        return {
-          id: sessionId,
-          projectPath,
-          projectName: extractProjectName(projectPath),
-          encodedPath,
-          messages,
-          firstMessage: firstMessageText.slice(0, 500),
-          lastActivity,
-          messageCount: visibleCount,
-          ...(tokenUsage && { tokenUsage }),
-        };
-      })
-      .filter((session): session is ChatSession => session !== null)
-      .sort((a, b) => b.lastActivity - a.lastActivity);
-  } catch {
-    return [];
-  }
-}
-
-export function getAllProjects(): Project[] {
-  try {
-    if (!fs.existsSync(PROJECTS_DIR)) {
-      return [];
-    }
-
-    const projectDirs = fs.readdirSync(PROJECTS_DIR);
-
-    return projectDirs
-      .map((dir) => {
-        const projectDirPath = path.join(PROJECTS_DIR, dir);
-        const stat = fs.statSync(projectDirPath);
-
-        if (!stat.isDirectory()) {
-          return null;
-        }
-
-        const sessions = getSessionsForProject(projectDirPath);
-
-        if (sessions.length === 0) {
-          return null;
-        }
-
-        const projectPath = decodeProjectPath(dir);
-        const totalMessages = sessions.reduce(
-          (sum, s) => sum + s.messageCount,
-          0
-        );
-        const lastActivity = Math.max(...sessions.map((s) => s.lastActivity));
-
-        return {
-          path: projectPath,
-          name: extractProjectName(projectPath),
-          encodedPath: dir,
-          sessions,
-          totalMessages,
-          lastActivity,
-        };
-      })
-      .filter((project): project is Project => project !== null)
-      .sort((a, b) => b.lastActivity - a.lastActivity);
-  } catch {
-    return [];
-  }
-}
-
-export function getProjectByPath(encodedPath: string): Project | null {
-  const projectDirPath = path.join(PROJECTS_DIR, encodedPath);
-
-  try {
-    if (!fs.existsSync(projectDirPath)) {
-      return null;
-    }
-
-    const sessions = getSessionsForProject(projectDirPath);
-
-    if (sessions.length === 0) {
-      return null;
-    }
-
-    const projectPath = decodeProjectPath(encodedPath);
-    const totalMessages = sessions.reduce((sum, s) => sum + s.messageCount, 0);
-    const lastActivity = Math.max(...sessions.map((s) => s.lastActivity));
-
-    return {
-      path: projectPath,
-      name: extractProjectName(projectPath),
-      encodedPath,
-      sessions,
-      totalMessages,
-      lastActivity,
-    };
-  } catch {
-    return null;
-  }
-}
-
 function getValidSessionFiles(projectDir: string): string[] {
   try {
     const files = fs.readdirSync(projectDir);
     return files.filter((f) => f.endsWith(".jsonl") && !f.startsWith("agent-"));
-  } catch {
-    return [];
-  }
-}
-
-export function getProjectsSummary(): ProjectSummary[] {
-  try {
-    if (!fs.existsSync(PROJECTS_DIR)) {
-      return [];
-    }
-
-    const projectDirs = fs.readdirSync(PROJECTS_DIR);
-    const stats = getProjectStats();
-
-    return projectDirs
-      .map((dir) => {
-        const projectDirPath = path.join(PROJECTS_DIR, dir);
-        const stat = fs.statSync(projectDirPath);
-
-        if (!stat.isDirectory()) {
-          return null;
-        }
-
-        const projectPath = decodeProjectPath(dir);
-
-        if (!fs.existsSync(projectPath)) {
-          return null;
-        }
-
-        const outsideHome = isOutsideHome(projectPath);
-
-        const sessionFiles = getValidSessionFiles(projectDirPath);
-        if (sessionFiles.length === 0) {
-          return null;
-        }
-
-        const dbStats = stats.get(dir);
-
-        let lastActivity = 0;
-        for (const file of sessionFiles) {
-          const filePath = path.join(projectDirPath, file);
-          const fileStat = fs.statSync(filePath);
-          const mtime = fileStat.mtime.getTime();
-          if (mtime > lastActivity) lastActivity = mtime;
-        }
-
-        const hasMemory = fs.existsSync(path.join(projectDirPath, "memory", "MEMORY.md"));
-
-        return {
-          path: projectPath,
-          name: extractProjectName(projectPath),
-          encodedPath: dir,
-          sessionCount: dbStats?.sessionCount ?? sessionFiles.length,
-          totalMessages: dbStats?.totalMessages ?? 0,
-          lastActivity,
-          hasMemory,
-          isOutsideHome: outsideHome,
-        };
-      })
-      .filter((project): project is ProjectSummary => project !== null)
-      .sort((a, b) => b.lastActivity - a.lastActivity);
   } catch {
     return [];
   }
@@ -433,103 +246,335 @@ function countVisibleMessages(filePath: string): number {
   }
 }
 
-export function getSessionsSummary(encodedPath: string): SessionSummary[] {
-  const dbSessions = getSessionSummariesFromDb(encodedPath);
-  if (dbSessions.length > 0) {
-    return dbSessions.map((s) => ({ ...s, encodedPath }));
-  }
+export interface ChatReaderDeps {
+  projectsDir?: string;
+  decodeProjectPath?: (encoded: string) => string;
+  getProjectStats?: () => Map<string, { sessionCount: number; totalMessages: number }>;
+  getSessionSummariesFromDb?: (encodedPath: string) => {
+    id: string;
+    firstMessage: string;
+    messageCount: number;
+    lastActivity: number;
+  }[];
+}
 
-  const projectDirPath = path.join(PROJECTS_DIR, encodedPath);
+export type ChatReaderInstance = ReturnType<typeof createChatReader>;
 
-  try {
-    if (!fs.existsSync(projectDirPath)) {
+export function createChatReader(deps?: ChatReaderDeps) {
+  const projectsDir = deps?.projectsDir ?? DEFAULT_PROJECTS_DIR;
+  const decode = deps?.decodeProjectPath ?? decodeProjectPath;
+  const getStats = deps?.getProjectStats ?? defaultGetProjectStats;
+  const getDbSessions = deps?.getSessionSummariesFromDb ?? defaultGetSessionSummariesFromDb;
+
+  function getSessionsForProject(projectDir: string): ChatSession[] {
+    try {
+      const files = fs.readdirSync(projectDir);
+      const jsonlFiles = files.filter((f) =>
+        f.endsWith(".jsonl") && !f.startsWith("agent-")
+      );
+      const encodedPath = path.basename(projectDir);
+
+      return jsonlFiles
+        .map((file) => {
+          const filePath = path.join(projectDir, file);
+          const messages = parseJsonlFile(filePath);
+
+          if (messages.length === 0) {
+            return null;
+          }
+
+          const sessionId = file.replace(".jsonl", "");
+          const firstUserMessage = messages.find((m) => m.type === "user" && !isSystemMessage(m));
+          const firstMessageText = firstUserMessage
+            ? extractTextFromContent(firstUserMessage.message.content)
+            : "No messages";
+
+          const timestamps = messages
+            .map((m) => parseTimestamp(m.timestamp))
+            .filter((t) => t > 0);
+          const lastActivity =
+            timestamps.length > 0 ? Math.max(...timestamps) : 0;
+
+          const projectPath = decode(encodedPath);
+          const visibleCount = messages.filter((m) => !isSystemMsg(m) && !hasNoVisibleContent(m)).length;
+          const tokenUsage = computeSessionTokens(messages);
+
+          return {
+            id: sessionId,
+            projectPath,
+            projectName: extractProjectName(projectPath),
+            encodedPath,
+            messages,
+            firstMessage: firstMessageText.slice(0, 500),
+            lastActivity,
+            messageCount: visibleCount,
+            ...(tokenUsage && { tokenUsage }),
+          };
+        })
+        .filter((session): session is ChatSession => session !== null)
+        .sort((a, b) => b.lastActivity - a.lastActivity);
+    } catch {
       return [];
     }
-
-    const sessionFiles = getValidSessionFiles(projectDirPath);
-
-    return sessionFiles
-      .map((file) => {
-        const filePath = path.join(projectDirPath, file);
-        const fileStat = fs.statSync(filePath);
-
-        if (fileStat.size === 0) {
-          return null;
-        }
-
-        const sessionId = file.replace(".jsonl", "");
-        const firstMessages = parseFirstLines(filePath, 100);
-
-        if (firstMessages.length === 0) {
-          return null;
-        }
-
-        const firstUserMessage = firstMessages.find((m) => m.type === "user" && !isSystemMessage(m));
-
-        if (!firstUserMessage) {
-          return null;
-        }
-
-        const firstMessageText = extractTextFromContent(firstUserMessage.message.content);
-        const visibleCount = countVisibleMessages(filePath);
-
-        return {
-          id: sessionId,
-          encodedPath,
-          firstMessage: firstMessageText.slice(0, 500),
-          messageCount: visibleCount,
-          lastActivity: fileStat.mtime.getTime(),
-        };
-      })
-      .filter((session): session is SessionSummary => session !== null)
-      .sort((a, b) => b.lastActivity - a.lastActivity);
-  } catch {
-    return [];
   }
-}
 
-export function getSessionById(
-  encodedProjectPath: string,
-  sessionId: string
-): ChatSession | null {
-  const projectDirPath = path.join(PROJECTS_DIR, encodedProjectPath);
-  const sessionFilePath = path.join(projectDirPath, `${sessionId}.jsonl`);
+  function getAllProjects(): Project[] {
+    try {
+      if (!fs.existsSync(projectsDir)) {
+        return [];
+      }
 
-  try {
-    if (!fs.existsSync(sessionFilePath)) {
+      const projectDirs = fs.readdirSync(projectsDir);
+
+      return projectDirs
+        .map((dir) => {
+          const projectDirPath = path.join(projectsDir, dir);
+          const stat = fs.statSync(projectDirPath);
+
+          if (!stat.isDirectory()) {
+            return null;
+          }
+
+          const sessions = getSessionsForProject(projectDirPath);
+
+          if (sessions.length === 0) {
+            return null;
+          }
+
+          const projectPath = decode(dir);
+          const totalMessages = sessions.reduce(
+            (sum, s) => sum + s.messageCount,
+            0
+          );
+          const lastActivity = Math.max(...sessions.map((s) => s.lastActivity));
+
+          return {
+            path: projectPath,
+            name: extractProjectName(projectPath),
+            encodedPath: dir,
+            sessions,
+            totalMessages,
+            lastActivity,
+          };
+        })
+        .filter((project): project is Project => project !== null)
+        .sort((a, b) => b.lastActivity - a.lastActivity);
+    } catch {
+      return [];
+    }
+  }
+
+  function getProjectByPath(encodedPath: string): Project | null {
+    const projectDirPath = path.join(projectsDir, encodedPath);
+
+    try {
+      if (!fs.existsSync(projectDirPath)) {
+        return null;
+      }
+
+      const sessions = getSessionsForProject(projectDirPath);
+
+      if (sessions.length === 0) {
+        return null;
+      }
+
+      const projectPath = decode(encodedPath);
+      const totalMessages = sessions.reduce((sum, s) => sum + s.messageCount, 0);
+      const lastActivity = Math.max(...sessions.map((s) => s.lastActivity));
+
+      return {
+        path: projectPath,
+        name: extractProjectName(projectPath),
+        encodedPath,
+        sessions,
+        totalMessages,
+        lastActivity,
+      };
+    } catch {
       return null;
     }
+  }
 
-    const messages = parseJsonlFile(sessionFilePath);
+  function getProjectsSummary(): ProjectSummary[] {
+    try {
+      if (!fs.existsSync(projectsDir)) {
+        return [];
+      }
 
-    if (messages.length === 0) {
-      return null;
+      const projectDirs = fs.readdirSync(projectsDir);
+      const stats = getStats();
+
+      return projectDirs
+        .map((dir) => {
+          const projectDirPath = path.join(projectsDir, dir);
+          const stat = fs.statSync(projectDirPath);
+
+          if (!stat.isDirectory()) {
+            return null;
+          }
+
+          const projectPath = decode(dir);
+
+          if (!fs.existsSync(projectPath)) {
+            return null;
+          }
+
+          const outsideHome = isOutsideHome(projectPath);
+
+          const sessionFiles = getValidSessionFiles(projectDirPath);
+          if (sessionFiles.length === 0) {
+            return null;
+          }
+
+          const dbStats = stats.get(dir);
+
+          let lastActivity = 0;
+          for (const file of sessionFiles) {
+            const filePath = path.join(projectDirPath, file);
+            const fileStat = fs.statSync(filePath);
+            const mtime = fileStat.mtime.getTime();
+            if (mtime > lastActivity) lastActivity = mtime;
+          }
+
+          const hasMemory = fs.existsSync(path.join(projectDirPath, "memory", "MEMORY.md"));
+
+          return {
+            path: projectPath,
+            name: extractProjectName(projectPath),
+            encodedPath: dir,
+            sessionCount: dbStats?.sessionCount ?? sessionFiles.length,
+            totalMessages: dbStats?.totalMessages ?? 0,
+            lastActivity,
+            hasMemory,
+            isOutsideHome: outsideHome,
+          };
+        })
+        .filter((project): project is ProjectSummary => project !== null)
+        .sort((a, b) => b.lastActivity - a.lastActivity);
+    } catch {
+      return [];
+    }
+  }
+
+  function getSessionsSummary(encodedPath: string): SessionSummary[] {
+    const dbSessions = getDbSessions(encodedPath);
+    if (dbSessions.length > 0) {
+      return dbSessions.map((s) => ({ ...s, encodedPath }));
     }
 
-    const firstUserMessage = messages.find((m) => m.type === "user" && !isSystemMessage(m));
-    const firstMessageText = firstUserMessage
-      ? extractTextFromContent(firstUserMessage.message.content)
-      : "No messages";
+    const projectDirPath = path.join(projectsDir, encodedPath);
 
-    const timestamps = messages.map((m) => parseTimestamp(m.timestamp)).filter((t) => t > 0);
-    const lastActivity = timestamps.length > 0 ? Math.max(...timestamps) : 0;
+    try {
+      if (!fs.existsSync(projectDirPath)) {
+        return [];
+      }
 
-    const projectPath = decodeProjectPath(encodedProjectPath);
-    const visibleCount = messages.filter((m) => !isSystemMsg(m) && !hasNoVisibleContent(m)).length;
-    const tokenUsage = computeSessionTokens(messages);
+      const sessionFiles = getValidSessionFiles(projectDirPath);
 
-    return {
-      id: sessionId,
-      projectPath,
-      projectName: extractProjectName(projectPath),
-      encodedPath: encodedProjectPath,
-      messages,
-      firstMessage: firstMessageText.slice(0, 500),
-      lastActivity,
-      messageCount: visibleCount,
-      ...(tokenUsage && { tokenUsage }),
-    };
-  } catch {
-    return null;
+      return sessionFiles
+        .map((file) => {
+          const filePath = path.join(projectDirPath, file);
+          const fileStat = fs.statSync(filePath);
+
+          if (fileStat.size === 0) {
+            return null;
+          }
+
+          const sessionId = file.replace(".jsonl", "");
+          const firstMessages = parseFirstLines(filePath, 100);
+
+          if (firstMessages.length === 0) {
+            return null;
+          }
+
+          const firstUserMessage = firstMessages.find((m) => m.type === "user" && !isSystemMessage(m));
+
+          if (!firstUserMessage) {
+            return null;
+          }
+
+          const firstMessageText = extractTextFromContent(firstUserMessage.message.content);
+          const visibleCount = countVisibleMessages(filePath);
+
+          return {
+            id: sessionId,
+            encodedPath,
+            firstMessage: firstMessageText.slice(0, 500),
+            messageCount: visibleCount,
+            lastActivity: fileStat.mtime.getTime(),
+          };
+        })
+        .filter((session): session is SessionSummary => session !== null)
+        .sort((a, b) => b.lastActivity - a.lastActivity);
+    } catch {
+      return [];
+    }
   }
+
+  function getSessionById(
+    encodedProjectPath: string,
+    sessionId: string
+  ): ChatSession | null {
+    const projectDirPath = path.join(projectsDir, encodedProjectPath);
+    const sessionFilePath = path.join(projectDirPath, `${sessionId}.jsonl`);
+
+    try {
+      if (!fs.existsSync(sessionFilePath)) {
+        return null;
+      }
+
+      const messages = parseJsonlFile(sessionFilePath);
+
+      if (messages.length === 0) {
+        return null;
+      }
+
+      const firstUserMessage = messages.find((m) => m.type === "user" && !isSystemMessage(m));
+      const firstMessageText = firstUserMessage
+        ? extractTextFromContent(firstUserMessage.message.content)
+        : "No messages";
+
+      const timestamps = messages.map((m) => parseTimestamp(m.timestamp)).filter((t) => t > 0);
+      const lastActivity = timestamps.length > 0 ? Math.max(...timestamps) : 0;
+
+      const projectPath = decode(encodedProjectPath);
+      const visibleCount = messages.filter((m) => !isSystemMsg(m) && !hasNoVisibleContent(m)).length;
+      const tokenUsage = computeSessionTokens(messages);
+
+      return {
+        id: sessionId,
+        projectPath,
+        projectName: extractProjectName(projectPath),
+        encodedPath: encodedProjectPath,
+        messages,
+        firstMessage: firstMessageText.slice(0, 500),
+        lastActivity,
+        messageCount: visibleCount,
+        ...(tokenUsage && { tokenUsage }),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  return {
+    getAllProjects,
+    getProjectByPath,
+    getProjectsSummary,
+    getSessionsSummary,
+    getSessionById,
+  };
 }
+
+let defaultInstance: ChatReaderInstance | null = null;
+
+function getDefault(): ChatReaderInstance {
+  if (!defaultInstance) defaultInstance = createChatReader();
+  return defaultInstance;
+}
+
+export function getAllProjects() { return getDefault().getAllProjects(); }
+export function getProjectByPath(encodedPath: string) { return getDefault().getProjectByPath(encodedPath); }
+export function getProjectsSummary() { return getDefault().getProjectsSummary(); }
+export function getSessionsSummary(encodedPath: string) { return getDefault().getSessionsSummary(encodedPath); }
+export function getSessionById(encodedProjectPath: string, sessionId: string) { return getDefault().getSessionById(encodedProjectPath, sessionId); }

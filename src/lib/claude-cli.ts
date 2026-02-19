@@ -15,64 +15,102 @@ function findClaudeExecutable(): string {
   }
 }
 
-const claudeExecutable = findClaudeExecutable();
-
-try {
-  const version = execSync(`${claudeExecutable} --version`, { encoding: "utf-8" }).trim();
-  console.log(`[claude-cli] ${claudeExecutable} (${version})`);
-} catch {
-  console.warn(`[claude-cli] ${claudeExecutable} (version unknown)`);
-}
-
-async function invokeClaude(prompt: string): Promise<ClaudeResponse> {
-  const stderrChunks: string[] = [];
-
+function logClaudeVersion(executable: string): void {
   try {
-    let result = "";
-
-    for await (const message of query({
-      prompt,
-      options: {
-        allowedTools: [],
-        maxTurns: 1,
-        pathToClaudeCodeExecutable: claudeExecutable,
-        stderr: (data: string) => stderrChunks.push(data),
-      },
-    })) {
-      if ("result" in message) {
-        result = message.result as string;
-      }
-    }
-
-    if (!result) {
-      return { success: false, output: "", error: "No result returned" };
-    }
-
-    return { success: true, output: result.trim() };
-  } catch (error) {
-    const stderr = stderrChunks.join("").trim();
-    const message = error instanceof Error ? error.message : "Unknown error";
-    const detail = stderr ? `${message} — stderr: ${stderr}` : message;
-    console.error("[claude-cli]", detail);
-    return { success: false, output: "", error: detail };
+    const version = execSync(`${executable} --version`, { encoding: "utf-8" }).trim();
+    console.log(`[claude-cli] ${executable} (${version})`);
+  } catch {
+    console.warn(`[claude-cli] ${executable} (version unknown)`);
   }
 }
 
-export async function generateSessionSummary(conversationText: string): Promise<ClaudeResponse> {
-  const prompt = `Summarise this Claude Code session in 2-3 sentences. Focus on what was being built or fixed. Be specific and concise.
+export type QueryFn = typeof query;
+
+export interface ClaudeCliDeps {
+  queryFn?: QueryFn;
+  claudeExecutable?: string;
+}
+
+export type ClaudeCliInstance = ReturnType<typeof createClaudeCli>;
+
+export function createClaudeCli(deps?: ClaudeCliDeps) {
+  const queryFn = deps?.queryFn ?? query;
+  const executable = deps?.claudeExecutable ?? findClaudeExecutable();
+
+  if (!deps?.claudeExecutable && !deps?.queryFn) {
+    logClaudeVersion(executable);
+  }
+
+  async function invokeClaude(prompt: string): Promise<ClaudeResponse> {
+    const stderrChunks: string[] = [];
+
+    try {
+      let result = "";
+
+      for await (const message of queryFn({
+        prompt,
+        options: {
+          allowedTools: [],
+          maxTurns: 1,
+          pathToClaudeCodeExecutable: executable,
+          stderr: (data: string) => stderrChunks.push(data),
+        },
+      })) {
+        if ("result" in message) {
+          result = message.result as string;
+        }
+      }
+
+      if (!result) {
+        return { success: false, output: "", error: "No result returned" };
+      }
+
+      return { success: true, output: result.trim() };
+    } catch (error) {
+      const stderr = stderrChunks.join("").trim();
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const detail = stderr ? `${message} — stderr: ${stderr}` : message;
+      console.error("[claude-cli]", detail);
+      return { success: false, output: "", error: detail };
+    }
+  }
+
+  async function generateSessionSummary(conversationText: string): Promise<ClaudeResponse> {
+    const prompt = `Summarise this Claude Code session in 2-3 sentences. Focus on what was being built or fixed. Be specific and concise.
 
 User requests from this session:
 ${conversationText}`;
 
-  return invokeClaude(prompt);
-}
+    return invokeClaude(prompt);
+  }
 
-export async function generateProjectSummary(sessionSummaries: string[]): Promise<ClaudeResponse> {
-  const summariesText = sessionSummaries.map((s, i) => `Session ${i + 1}: ${s}`).join("\n");
+  async function generateProjectSummary(sessionSummaries: string[]): Promise<ClaudeResponse> {
+    const summariesText = sessionSummaries.map((s, i) => `Session ${i + 1}: ${s}`).join("\n");
 
-  const prompt = `Given these session summaries from a coding project, provide a brief 2-3 sentence overview of what this project involves and recent activity.
+    const prompt = `Given these session summaries from a coding project, provide a brief 2-3 sentence overview of what this project involves and recent activity.
 
 ${summariesText}`;
 
-  return invokeClaude(prompt);
+    return invokeClaude(prompt);
+  }
+
+  return {
+    generateSessionSummary,
+    generateProjectSummary,
+  };
+}
+
+let defaultInstance: ClaudeCliInstance | null = null;
+
+function getDefault(): ClaudeCliInstance {
+  if (!defaultInstance) defaultInstance = createClaudeCli();
+  return defaultInstance;
+}
+
+export async function generateSessionSummary(conversationText: string) {
+  return getDefault().generateSessionSummary(conversationText);
+}
+
+export async function generateProjectSummary(sessionSummaries: string[]) {
+  return getDefault().generateProjectSummary(sessionSummaries);
 }

@@ -1,0 +1,4 @@
+this is not valid json
+{"parentUuid":null,"isSidechain":false,"userType":"human","cwd":"/tmp/test","sessionId":"session-bad","version":"1.0.0","gitBranch":"main","type":"file-history-snapshot","message":{"role":"user","content":"snapshot data"},"uuid":"c1000001-0000-0000-0000-000000000001","timestamp":"2026-01-15T10:00:00Z"}
+{invalid json here too}
+{"parentUuid":null,"isSidechain":false,"userType":"human","cwd":"/tmp/test","sessionId":"session-bad","version":"1.0.0","gitBranch":"main","type":"user","message":{"role":"user","content":"This is the only valid user message"},"uuid":"c1000002-0000-0000-0000-000000000002","timestamp":"2026-01-15T10:01:00Z"}
