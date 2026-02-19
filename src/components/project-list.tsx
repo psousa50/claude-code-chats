@@ -38,6 +38,7 @@ export function ProjectList() {
   const [projects, setProjects] = useState<ProjectSummary[] | null>(cachedProjects);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortOption>("recent");
+  const [hideOutsideHome, setHideOutsideHome] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,14 +61,22 @@ export function ProjectList() {
     };
   }, []);
 
+  const hasOutsideHomeProjects = useMemo(() => {
+    return projects?.some((p) => p.isOutsideHome) ?? false;
+  }, [projects]);
+
   const filteredProjects = useMemo(() => {
     if (!projects) return [];
 
     let filtered = projects;
 
+    if (hideOutsideHome) {
+      filtered = filtered.filter((p) => !p.isOutsideHome);
+    }
+
     if (search.trim()) {
       const searchLower = search.toLowerCase();
-      filtered = projects.filter(
+      filtered = filtered.filter(
         (p) =>
           p.name.toLowerCase().includes(searchLower) ||
           p.path.toLowerCase().includes(searchLower)
@@ -87,7 +96,7 @@ export function ProjectList() {
           return b.lastActivity - a.lastActivity;
       }
     });
-  }, [projects, search, sort]);
+  }, [projects, search, sort, hideOutsideHome]);
 
   return (
     <div>
@@ -99,6 +108,18 @@ export function ProjectList() {
             placeholder="Search projects..."
           />
         </div>
+        {hasOutsideHomeProjects && (
+          <button
+            onClick={() => setHideOutsideHome(!hideOutsideHome)}
+            className={`px-3 py-2.5 border rounded-xl text-sm transition-all whitespace-nowrap ${
+              hideOutsideHome
+                ? "bg-accent/10 border-accent text-accent"
+                : "bg-surface border-edge-subtle text-content-secondary hover:border-accent/50"
+            }`}
+          >
+            {hideOutsideHome ? "External hidden" : "Hide external"}
+          </button>
+        )}
         <select
           value={sort}
           onChange={(e) => setSort(e.target.value as SortOption)}

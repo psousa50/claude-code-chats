@@ -60,6 +60,7 @@ export interface ProjectSummary {
   totalMessages: number;
   lastActivity: number;
   hasMemory: boolean;
+  isOutsideHome: boolean;
 }
 
 export interface SessionSummary {

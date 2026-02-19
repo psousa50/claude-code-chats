@@ -100,10 +100,10 @@ export function encodeProjectPath(projectPath: string): string {
   return projectPath.replace(/\//g, "-");
 }
 
-const TEMP_PREFIXES = ["/tmp", "/var/folders", "/private/tmp", "/private/var/folders"];
+const HOME_DIR = process.env.HOME || "";
 
-function isTempPath(projectPath: string): boolean {
-  return TEMP_PREFIXES.some((prefix) => projectPath.startsWith(prefix));
+function isOutsideHome(projectPath: string): boolean {
+  return !HOME_DIR || !projectPath.startsWith(HOME_DIR);
 }
 
 function extractProjectName(projectPath: string): string {
@@ -344,9 +344,11 @@ export function getProjectsSummary(): ProjectSummary[] {
 
         const projectPath = decodeProjectPath(dir);
 
-        if (!fs.existsSync(projectPath) || isTempPath(projectPath)) {
+        if (!fs.existsSync(projectPath)) {
           return null;
         }
+
+        const outsideHome = isOutsideHome(projectPath);
 
         const sessionFiles = getValidSessionFiles(projectDirPath);
         if (sessionFiles.length === 0) {
@@ -373,6 +375,7 @@ export function getProjectsSummary(): ProjectSummary[] {
           totalMessages: dbStats?.totalMessages ?? 0,
           lastActivity,
           hasMemory,
+          isOutsideHome: outsideHome,
         };
       })
       .filter((project): project is ProjectSummary => project !== null)
