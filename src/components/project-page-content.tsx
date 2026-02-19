@@ -22,12 +22,12 @@ function SessionListSkeleton() {
       {Array.from({ length: 5 }).map((_, i) => (
         <div
           key={i}
-          className="p-4 bg-neutral-900/50 border border-neutral-800 rounded-lg"
+          className={`p-4 bg-surface border border-edge-subtle rounded-xl animate-in stagger-${i + 1}`}
         >
-          <div className="h-4 w-3/4 bg-neutral-800 rounded animate-pulse" />
+          <div className="h-4 w-3/4 rounded skeleton-shimmer" />
           <div className="flex items-center gap-4 mt-3">
-            <div className="h-3 w-20 bg-neutral-800/50 rounded animate-pulse" />
-            <div className="h-3 w-16 bg-neutral-800/50 rounded animate-pulse ml-auto" />
+            <div className="h-3 w-20 rounded skeleton-shimmer" />
+            <div className="h-3 w-16 rounded skeleton-shimmer ml-auto" />
           </div>
         </div>
       ))}
@@ -71,10 +71,10 @@ export function ProjectPageContent({ encodedPath }: { encodedPath: string }) {
         hasMemory={data?.hasMemory ?? false}
       />
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         {data ? (
           <>
-            <div className="flex items-center gap-4 mb-6 text-sm text-neutral-400">
+            <div className="flex items-center gap-4 mb-6 text-sm text-content-secondary animate-in">
               <span className="flex items-center gap-1.5">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -95,7 +95,7 @@ export function ProjectPageContent({ encodedPath }: { encodedPath: string }) {
               </span>
             </div>
 
-            <div className="mb-6">
+            <div className="mb-6 animate-in stagger-1">
               <SummarySection
                 type="project"
                 projectPath={encodedPath}
@@ -103,7 +103,9 @@ export function ProjectPageContent({ encodedPath }: { encodedPath: string }) {
               />
             </div>
 
-            <SessionList key={encodedPath} sessions={data.sessions} encodedPath={encodedPath} />
+            <div className="animate-in stagger-2">
+              <SessionList key={encodedPath} sessions={data.sessions} encodedPath={encodedPath} />
+            </div>
           </>
         ) : (
           <SessionListSkeleton />

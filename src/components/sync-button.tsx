@@ -37,7 +37,7 @@ export function SyncButton() {
       <button
         onClick={handleSync}
         disabled={syncing}
-        className="p-2 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="p-2 text-content-tertiary hover:text-content-secondary hover:bg-surface-elevated rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         title="Resync database"
       >
         <svg
@@ -56,7 +56,7 @@ export function SyncButton() {
       </button>
 
       {result && (result.added > 0 || result.updated > 0 || result.removed > 0) && (
-        <div className="text-xs text-neutral-500 whitespace-nowrap">
+        <div className="text-xs text-content-tertiary whitespace-nowrap animate-fade">
           {result.added > 0 && `+${result.added}`}
           {result.updated > 0 && ` ~${result.updated}`}
           {result.removed > 0 && ` -${result.removed}`}

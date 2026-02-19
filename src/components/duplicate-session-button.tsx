@@ -94,7 +94,7 @@ export function DuplicateSessionButton({
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="px-3 py-1.5 text-sm text-amber-500 hover:text-amber-400 hover:bg-amber-500/10 border border-amber-500/30 rounded-lg transition-colors flex items-center gap-2"
+        className="px-3 py-1.5 text-sm text-accent hover:text-accent-hover hover:bg-accent/10 border border-accent/20 rounded-lg transition-all flex items-center gap-2"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -110,14 +110,14 @@ export function DuplicateSessionButton({
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade"
             onClick={loading ? undefined : () => setIsOpen(false)}
           />
-          <div className="relative bg-neutral-900 border border-neutral-800 rounded-lg p-6 w-full max-w-md mx-4 shadow-xl">
-            <h2 className="text-lg font-semibold text-neutral-100 mb-4">Duplicate Session</h2>
+          <div className="relative bg-surface-elevated border border-edge rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl animate-modal">
+            <h2 className="text-lg font-serif text-content-primary mb-4">Duplicate Session</h2>
 
             <div className="mb-4">
-              <label htmlFor="keepLastN" className="block text-sm text-neutral-400 mb-2">
+              <label htmlFor="keepLastN" className="block text-sm text-content-secondary mb-2">
                 Keep last N messages (optional)
               </label>
               <input
@@ -128,72 +128,61 @@ export function DuplicateSessionButton({
                 value={keepLastN}
                 onChange={(e) => setKeepLastN(e.target.value)}
                 disabled={loading}
-                className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-neutral-100 placeholder-neutral-500 focus:outline-none focus:border-amber-500 disabled:opacity-50"
+                className="w-full px-3 py-2.5 bg-surface border border-edge rounded-xl text-content-primary placeholder-content-tertiary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 disabled:opacity-50 transition-all"
                 placeholder={`Leave empty for all ${totalMessageCount} messages`}
               />
             </div>
 
             <div className="mb-4">
-              <label className="flex items-center gap-2 text-sm text-neutral-400 cursor-pointer">
+              <label className="flex items-center gap-2 text-sm text-content-secondary cursor-pointer">
                 <input
                   type="checkbox"
                   checked={stripToolResults}
                   onChange={(e) => setStripToolResults(e.target.checked)}
                   disabled={loading}
-                  className="w-4 h-4 rounded border-neutral-600 bg-neutral-800 text-amber-500 focus:ring-amber-500 focus:ring-offset-0 disabled:opacity-50"
+                  className="w-4 h-4 rounded border-edge-hover bg-surface text-accent focus:ring-accent focus:ring-offset-0 disabled:opacity-50"
                 />
                 Strip tool results & system messages
               </label>
             </div>
 
-            <div className="text-sm text-neutral-400 mb-4 p-3 bg-neutral-800/50 rounded-lg">
+            <div className="text-sm text-content-secondary mb-4 p-3 bg-surface rounded-xl border border-edge-subtle">
               <div className="flex justify-between">
                 <span>Original</span>
-                <span className="text-neutral-200">{totalMessageCount} messages</span>
+                <span className="text-content-primary">{totalMessageCount} messages</span>
               </div>
               <div className="flex justify-between mt-1">
                 <span>Result</span>
-                <span className="text-neutral-200">{resultingMessageCount} messages</span>
+                <span className="text-content-primary">{resultingMessageCount} messages</span>
               </div>
               {reductionPercent > 0 && (
-                <div className="flex justify-between mt-1 text-amber-500">
+                <div className="flex justify-between mt-1 text-accent">
                   <span>Reduction</span>
                   <span>{reductionPercent}%</span>
                 </div>
               )}
             </div>
 
-            {error && <p className="text-sm text-red-400 mb-4">{error}</p>}
+            {error && <p className="text-sm text-danger mb-4">{error}</p>}
 
             <div className="flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
                 disabled={loading}
-                className="px-4 py-2 text-sm text-neutral-400 hover:text-neutral-200 transition-colors disabled:opacity-50"
+                className="px-4 py-2 text-sm text-content-secondary hover:text-content-primary transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDuplicate}
                 disabled={loading || !isValidKeepLastN}
-                className="px-4 py-2 text-sm font-medium bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 text-sm font-medium bg-accent hover:bg-accent-hover text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {loading && (
                   <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
                 )}
                 {loading ? "Duplicating..." : "Duplicate"}

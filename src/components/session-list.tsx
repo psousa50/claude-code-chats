@@ -66,12 +66,12 @@ export function SessionList({ sessions, encodedPath }: SessionListProps) {
           />
         </div>
         {shortCount > 0 && (
-          <label className="flex items-center gap-2 text-xs text-neutral-500 cursor-pointer whitespace-nowrap">
+          <label className="flex items-center gap-2 text-xs text-content-tertiary cursor-pointer whitespace-nowrap">
             <input
               type="checkbox"
               checked={hideShort}
               onChange={(e) => handleHideShortChange(e.target.checked)}
-              className="rounded border-neutral-600 bg-neutral-800"
+              className="rounded border-edge-hover bg-surface-elevated text-accent focus:ring-accent focus:ring-offset-0"
             />
             Hide short ({shortCount})
           </label>
@@ -79,23 +79,25 @@ export function SessionList({ sessions, encodedPath }: SessionListProps) {
       </div>
 
       {filteredSessions.length === 0 ? (
-        <div className="text-center py-12 text-neutral-500">
+        <div className="text-center py-16 text-content-tertiary animate-fade">
           {search ? "No sessions found matching your search" : "No sessions found"}
         </div>
       ) : (
         <div className="grid gap-3">
-          {paginatedSessions.map((session) => (
-            <SessionCard key={session.id} session={session} encodedPath={encodedPath} />
+          {paginatedSessions.map((session, i) => (
+            <div key={session.id} className={`animate-in stagger-${Math.min(i + 1, 10)}`}>
+              <SessionCard session={session} encodedPath={encodedPath} />
+            </div>
           ))}
         </div>
       )}
 
-      <div className="mt-4 flex items-center justify-center gap-4 text-xs text-neutral-600">
+      <div className="mt-6 flex items-center justify-center gap-4 text-xs text-content-tertiary">
         <span>Showing {paginatedSessions.length} of {sessions.length} sessions{filteredSessions.length < sessions.length && ` (${sessions.length - filteredSessions.length} hidden)`}</span>
         {hasMore && (
           <button
             onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-            className="px-3 py-1.5 text-amber-500 hover:text-amber-400 hover:bg-amber-500/10 border border-amber-500/30 rounded-lg transition-colors"
+            className="px-3 py-1.5 text-accent hover:text-accent-hover hover:bg-accent/10 border border-accent/20 rounded-lg transition-all"
           >
             Load more
           </button>

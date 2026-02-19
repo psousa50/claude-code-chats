@@ -48,22 +48,22 @@ export function MessageBubble({ message, compact = false }: MessageBubbleProps) 
       <div
         className={`max-w-[85%] rounded-2xl px-4 py-3 ${
           isUser
-            ? "bg-amber-600 text-white rounded-br-md"
-            : "bg-neutral-800 text-neutral-100 rounded-bl-md"
+            ? "bg-accent/15 border border-accent/20 text-content-primary rounded-br-md"
+            : "bg-surface-elevated border border-edge-subtle text-content-primary rounded-bl-md"
         }`}
       >
-        <div className="text-xs opacity-60 mb-1.5">
+        <div className={`text-[11px] mb-1.5 ${isUser ? "text-accent/60" : "text-content-tertiary"}`}>
           {isUser ? "You" : "Claude"} · {formatDateTime(message.timestamp)}
         </div>
-        <div className="text-sm whitespace-pre-wrap break-words">
+        <div className="text-sm whitespace-pre-wrap break-words leading-relaxed">
           {expanded ? content : truncatedContent}
         </div>
         {needsTruncation && (
           <button
             onClick={() => setExpanded(!expanded)}
             className={`mt-2 text-xs font-medium ${
-              isUser ? "text-amber-200 hover:text-white" : "text-amber-500 hover:text-amber-400"
-            }`}
+              isUser ? "text-accent/70 hover:text-accent" : "text-accent hover:text-accent-hover"
+            } transition-colors`}
           >
             {expanded ? "Show less" : "Show more"}
           </button>

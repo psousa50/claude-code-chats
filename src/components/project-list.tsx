@@ -11,22 +11,22 @@ let cachedProjects: ProjectSummary[] | null = null;
 
 function ProjectListSkeleton() {
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-3 lg:grid-cols-2">
       {Array.from({ length: 6 }).map((_, i) => (
         <div
           key={i}
-          className="p-4 bg-neutral-900/50 border border-neutral-800 rounded-lg"
+          className={`p-4 bg-surface border border-edge-subtle rounded-xl animate-in stagger-${i + 1}`}
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <div className="h-5 w-40 bg-neutral-800 rounded animate-pulse" />
-              <div className="h-3 w-64 bg-neutral-800/50 rounded animate-pulse mt-2" />
+              <div className="h-5 w-40 rounded skeleton-shimmer" />
+              <div className="h-3 w-64 rounded skeleton-shimmer mt-2" />
             </div>
           </div>
           <div className="flex items-center gap-4 mt-3">
-            <div className="h-3 w-20 bg-neutral-800/50 rounded animate-pulse" />
-            <div className="h-3 w-24 bg-neutral-800/50 rounded animate-pulse" />
-            <div className="h-3 w-16 bg-neutral-800/50 rounded animate-pulse ml-auto" />
+            <div className="h-3 w-20 rounded skeleton-shimmer" />
+            <div className="h-3 w-24 rounded skeleton-shimmer" />
+            <div className="h-3 w-16 rounded skeleton-shimmer ml-auto" />
           </div>
         </div>
       ))}
@@ -102,7 +102,7 @@ export function ProjectList() {
         <select
           value={sort}
           onChange={(e) => setSort(e.target.value as SortOption)}
-          className="px-3 py-2.5 bg-neutral-900 border border-neutral-800 rounded-lg text-sm text-neutral-300 focus:outline-none focus:border-amber-600 cursor-pointer"
+          className="px-3 py-2.5 bg-surface border border-edge-subtle rounded-xl text-sm text-content-secondary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30 cursor-pointer transition-all"
         >
           <option value="recent">Most Recent</option>
           <option value="name">Name</option>
@@ -114,19 +114,21 @@ export function ProjectList() {
       {projects === null ? (
         <ProjectListSkeleton />
       ) : filteredProjects.length === 0 ? (
-        <div className="text-center py-12 text-neutral-500">
+        <div className="text-center py-16 text-content-tertiary animate-fade">
           {search ? "No projects found matching your search" : "No projects found"}
         </div>
       ) : (
-        <div className="grid gap-3">
-          {filteredProjects.map((project) => (
-            <ProjectCard key={project.path} project={project} />
+        <div className="grid gap-3 lg:grid-cols-2">
+          {filteredProjects.map((project, i) => (
+            <div key={project.path} className={`animate-in stagger-${Math.min(i + 1, 10)}`}>
+              <ProjectCard project={project} />
+            </div>
           ))}
         </div>
       )}
 
       {projects !== null && (
-        <div className="mt-4 text-xs text-neutral-600 text-center">
+        <div className="mt-6 text-xs text-content-tertiary text-center">
           {filteredProjects.length} of {projects.length} projects
         </div>
       )}

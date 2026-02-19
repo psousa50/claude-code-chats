@@ -1,5 +1,23 @@
 import type { Metadata } from "next";
+import { DM_Sans, Instrument_Serif, JetBrains_Mono } from "next/font/google";
+import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
+
+const instrumentSerif = Instrument_Serif({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-serif",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+});
 
 export const metadata: Metadata = {
   title: "Claude Code Chats",
@@ -12,8 +30,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen antialiased">{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t)}else{document.documentElement.setAttribute("data-theme",window.matchMedia("(prefers-color-scheme:light)").matches?"light":"dark")}}catch(e){document.documentElement.setAttribute("data-theme","dark")}})()`,
+          }}
+        />
+      </head>
+      <body
+        className={`${dmSans.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} font-sans min-h-screen antialiased`}
+      >
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }
