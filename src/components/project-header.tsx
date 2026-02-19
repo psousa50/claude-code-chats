@@ -40,7 +40,7 @@ export function ProjectHeader({ projectName, projectPath, encodedPath, hasMemory
               </svg>
             </Link>
             <div className="flex-1 min-w-0 hidden sm:block">
-              <h1 className="text-lg font-serif text-content-primary truncate">{projectName}</h1>
+              <h1 className="text-lg font-medium text-content-primary truncate">{projectName}</h1>
               <p className="text-xs text-content-tertiary truncate font-mono">{projectPath}</p>
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0">

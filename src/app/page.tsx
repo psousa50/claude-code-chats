@@ -16,7 +16,7 @@ export default function Home() {
                 </svg>
               </div>
               <div className="hidden sm:block">
-                <h1 className="text-lg font-serif text-content-primary tracking-tight">Claude Code Chats</h1>
+                <h1 className="text-lg font-medium text-content-primary tracking-tight">Claude Code Chats</h1>
                 <p className="text-xs text-content-tertiary">Browse your chat history</p>
               </div>
             </div>

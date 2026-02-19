@@ -114,7 +114,7 @@ export function DuplicateSessionButton({
             onClick={loading ? undefined : () => setIsOpen(false)}
           />
           <div className="relative bg-surface-elevated border border-edge rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl animate-modal">
-            <h2 className="text-lg font-serif text-content-primary mb-4">Duplicate Session</h2>
+            <h2 className="text-lg font-medium text-content-primary mb-4">Duplicate Session</h2>
 
             <div className="mb-4">
               <label htmlFor="keepLastN" className="block text-sm text-content-secondary mb-2">

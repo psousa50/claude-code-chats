@@ -1,17 +1,11 @@
 import type { Metadata } from "next";
-import { DM_Sans, Instrument_Serif, JetBrains_Mono } from "next/font/google";
+import { DM_Sans, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
   variable: "--font-sans",
-});
-
-const instrumentSerif = Instrument_Serif({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-serif",
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -39,7 +33,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${dmSans.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} font-sans min-h-screen antialiased`}
+        className={`${dmSans.variable} ${jetbrainsMono.variable} font-sans min-h-screen antialiased`}
       >
         <ThemeProvider>{children}</ThemeProvider>
       </body>

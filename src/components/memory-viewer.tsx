@@ -43,7 +43,7 @@ export function MemoryViewer({ encodedPath, onClose }: MemoryViewerProps) {
       />
       <div className="relative bg-surface-elevated border border-edge rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl mx-4 animate-modal">
         <div className="flex items-center justify-between px-5 py-4 border-b border-edge-subtle">
-          <h2 className="text-sm font-serif text-content-primary">Project Memory</h2>
+          <h2 className="text-sm font-medium text-content-primary">Project Memory</h2>
           <button
             onClick={onClose}
             className="p-1.5 -mr-1.5 text-content-tertiary hover:text-content-primary hover:bg-surface rounded-lg transition-all"

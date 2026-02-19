@@ -83,7 +83,7 @@ export function DeleteSessionButton({
             onClick={loading ? undefined : () => setIsOpen(false)}
           />
           <div className="relative bg-surface-elevated border border-edge rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl animate-modal">
-            <h2 className="text-lg font-serif text-content-primary mb-4">Delete Session</h2>
+            <h2 className="text-lg font-medium text-content-primary mb-4">Delete Session</h2>
 
             <p className="text-sm text-content-secondary mb-4">
               Are you sure you want to delete this session? This action cannot be undone.

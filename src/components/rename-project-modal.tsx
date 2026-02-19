@@ -87,7 +87,7 @@ export function RenameProjectModal({
         onClick={loading ? undefined : onClose}
       />
       <div className="relative bg-surface-elevated border border-edge rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl animate-modal">
-        <h2 className="text-lg font-serif text-content-primary mb-4">Rename Project</h2>
+        <h2 className="text-lg font-medium text-content-primary mb-4">Rename Project</h2>
 
         <form onSubmit={handleSubmit}>
           <div className="mb-4">

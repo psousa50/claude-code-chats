@@ -42,7 +42,7 @@ export default async function SessionPage({ params, searchParams }: Props) {
               </svg>
             </Link>
             <div className="flex-1 min-w-0 hidden sm:block">
-              <h1 className="text-lg font-serif text-content-primary truncate">{session.projectName}</h1>
+              <h1 className="text-lg font-medium text-content-primary truncate">{session.projectName}</h1>
               <p className="text-xs text-content-tertiary truncate font-mono">{session.id}</p>
             </div>
             <div className="flex-1 max-w-md">
