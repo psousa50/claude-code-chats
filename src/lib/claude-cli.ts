@@ -17,6 +17,13 @@ function findClaudeExecutable(): string {
 
 const claudeExecutable = findClaudeExecutable();
 
+try {
+  const version = execSync(`${claudeExecutable} --version`, { encoding: "utf-8" }).trim();
+  console.log(`[claude-cli] ${claudeExecutable} (${version})`);
+} catch {
+  console.warn(`[claude-cli] ${claudeExecutable} (version unknown)`);
+}
+
 async function invokeClaude(prompt: string): Promise<ClaudeResponse> {
   const stderrChunks: string[] = [];
 
