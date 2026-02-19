@@ -1,10 +1,21 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import { execSync } from "child_process";
 
 export interface ClaudeResponse {
   success: boolean;
   output: string;
   error?: string;
 }
+
+function findClaudeExecutable(): string {
+  try {
+    return execSync("which claude", { encoding: "utf-8" }).trim();
+  } catch {
+    return "claude";
+  }
+}
+
+const claudeExecutable = findClaudeExecutable();
 
 async function invokeClaude(prompt: string): Promise<ClaudeResponse> {
   try {
@@ -15,6 +26,7 @@ async function invokeClaude(prompt: string): Promise<ClaudeResponse> {
       options: {
         allowedTools: [],
         maxTurns: 1,
+        pathToClaudeCodeExecutable: claudeExecutable,
       },
     })) {
       if ("result" in message) {
