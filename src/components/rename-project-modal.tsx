@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 
 interface RenameProjectModalProps {
   isOpen: boolean
@@ -80,7 +81,7 @@ export function RenameProjectModal({
     }
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade"
@@ -145,6 +146,7 @@ export function RenameProjectModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
