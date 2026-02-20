@@ -13,6 +13,16 @@ export function extractTextFromContent(content: ChatMessage['message']['content'
   return ''
 }
 
+export function extractAllTextFromContent(content: ChatMessage['message']['content']): string {
+  if (typeof content === 'string') {
+    return content
+  }
+  return content
+    .filter((block): block is ContentBlock & { type: 'text' } => block.type === 'text')
+    .map((block) => block.text)
+    .join('\n')
+}
+
 export function isSystemMessage(message: ChatMessage): boolean {
   if (message.isMeta) return true
 
@@ -20,6 +30,7 @@ export function isSystemMessage(message: ChatMessage): boolean {
   if (text.startsWith('<command-name>')) return true
   if (text.startsWith('<local-command-')) return true
   if (text.startsWith('Caveat:')) return true
+  if (text.startsWith('<system-reminder>')) return true
 
   return false
 }

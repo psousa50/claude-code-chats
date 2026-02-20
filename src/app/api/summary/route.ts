@@ -2,67 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSummary, saveSummary, getSessionSummaries } from '@/lib/search-db'
 import { getSessionById, getProjectByPath } from '@/lib/chat-reader'
 import { generateSessionSummary, generateProjectSummary } from '@/lib/claude-cli'
-import { ChatMessage } from '@/lib/types'
+import { formatConversationForSummary } from '@/lib/summary-format'
 
 export const dynamic = 'force-dynamic'
-
-function extractTextFromContent(content: ChatMessage['message']['content']): string {
-  if (typeof content === 'string') {
-    return content
-  }
-  const textBlock = content.find((block) => block.type === 'text')
-  if (textBlock && 'text' in textBlock) {
-    return textBlock.text
-  }
-  return ''
-}
-
-function isSystemMessage(message: ChatMessage): boolean {
-  if (message.isMeta) return true
-  const text = extractTextFromContent(message.message.content)
-  if (text.startsWith('<command-name>')) return true
-  if (text.startsWith('<local-command-')) return true
-  if (text.startsWith('Caveat:')) return true
-  if (text.startsWith('<system-reminder>')) return true
-  return false
-}
-
-function formatConversationForSummary(messages: ChatMessage[]): string {
-  const MAX_CHARS = 15000
-  const MAX_MSG_LENGTH = 500
-
-  const filteredMessages = messages.filter(
-    (m) => !isSystemMessage(m) && extractTextFromContent(m.message.content).trim(),
-  )
-
-  const userMessages = filteredMessages.filter((m) => m.type === 'user')
-
-  const sampled: ChatMessage[] = []
-
-  if (userMessages.length <= 20) {
-    sampled.push(...userMessages)
-  } else {
-    sampled.push(...userMessages.slice(0, 5))
-    const middleStart = Math.floor(userMessages.length / 2) - 2
-    sampled.push(...userMessages.slice(middleStart, middleStart + 5))
-    sampled.push(...userMessages.slice(-5))
-  }
-
-  let output = ''
-  for (const message of sampled) {
-    const text = extractTextFromContent(message.message.content)
-    const truncatedText =
-      text.length > MAX_MSG_LENGTH ? text.slice(0, MAX_MSG_LENGTH) + '...' : text
-    const line = `- ${truncatedText}\n`
-
-    if (output.length + line.length > MAX_CHARS) {
-      break
-    }
-    output += line
-  }
-
-  return output
-}
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams

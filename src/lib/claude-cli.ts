@@ -76,9 +76,9 @@ export function createClaudeCli(deps?: ClaudeCliDeps) {
   }
 
   async function generateSessionSummary(conversationText: string): Promise<ClaudeResponse> {
-    const prompt = `Summarise this Claude Code session in 2-3 sentences. Focus on what was being built or fixed. Be specific and concise.
+    const prompt = `Summarise this Claude Code session in 2-3 sentences. Focus on what was actually built, fixed, or changed — not just what was requested. Be specific about technologies, files, or features involved.
 
-User requests from this session:
+Conversation (user requests paired with assistant responses):
 ${conversationText}`
 
     return invokeClaude(prompt)
