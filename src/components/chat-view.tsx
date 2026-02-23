@@ -21,7 +21,7 @@ interface ChatViewProps {
 
 export function ChatView({
   messages,
-  previewCount = 6,
+  previewCount = 50,
   highlightMessageId,
   showHidden = false,
 }: ChatViewProps) {
