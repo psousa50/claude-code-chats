@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { ChatMessage } from '@/lib/types'
 import { MessageBubble } from './message-bubble'
 import { CommandInvocationBubble } from './command-invocation-bubble'
+import { SystemMessageBubble } from './system-message-bubble'
 import { parseTimestamp } from '@/lib/format'
 import {
   isSystemMessage,
@@ -58,15 +59,19 @@ export function ChatView({
             {(() => {
               const text = extractTextFromContent(message.message.content)
               const cmd = parseCommandInvocation(text)
-              return cmd ? (
-                <CommandInvocationBubble
-                  name={cmd.name}
-                  args={cmd.args}
-                  timestamp={message.timestamp}
-                />
-              ) : (
-                <MessageBubble message={message} compact={!showAll} />
-              )
+              if (cmd) {
+                return (
+                  <CommandInvocationBubble
+                    name={cmd.name}
+                    args={cmd.args}
+                    timestamp={message.timestamp}
+                  />
+                )
+              }
+              if (showHidden && isSystemMessage(message)) {
+                return <SystemMessageBubble content={text} timestamp={message.timestamp} />
+              }
+              return <MessageBubble message={message} compact={!showAll} />
             })()}
           </div>
         )
