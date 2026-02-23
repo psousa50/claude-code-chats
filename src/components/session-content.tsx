@@ -8,6 +8,8 @@ import { ResumeCommandCopy } from './resume-command-copy'
 import { DuplicateSessionButton } from './duplicate-session-button'
 import { DeleteSessionButton } from './delete-session-button'
 import { SummarySection } from './summary-section'
+import { SubagentList } from './subagent-list'
+import { SubagentSummary } from '@/lib/types'
 
 interface TokenUsage {
   input_tokens: number
@@ -26,6 +28,7 @@ interface SessionContentProps {
   strippedMessageCount: number
   messages: ChatMessage[]
   highlightMessageId?: string
+  subagents?: SubagentSummary[]
 }
 
 export function SessionContent({
@@ -38,6 +41,7 @@ export function SessionContent({
   strippedMessageCount,
   messages,
   highlightMessageId,
+  subagents,
 }: SessionContentProps) {
   const [showHidden, setShowHidden] = useState(false)
 
@@ -140,6 +144,10 @@ export function SessionContent({
         highlightMessageId={highlightMessageId}
         showHidden={showHidden}
       />
+
+      {subagents && subagents.length > 0 && (
+        <SubagentList subagents={subagents} projectPath={projectPath} sessionId={sessionId} />
+      )}
     </>
   )
 }

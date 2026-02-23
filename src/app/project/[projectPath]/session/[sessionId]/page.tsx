@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { getSessionById } from '@/lib/chat-reader'
+import { getSessionById, getSubagentsForSession } from '@/lib/chat-reader'
 import { GlobalSearch } from '@/components/global-search'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { FontSizeToggle } from '@/components/font-size-toggle'
@@ -19,6 +19,7 @@ export default async function SessionPage({ params, searchParams }: Props) {
   const { projectPath, sessionId } = await params
   const { highlight } = await searchParams
   const session = getSessionById(projectPath, sessionId)
+  const subagents = getSubagentsForSession(projectPath, sessionId)
 
   if (!session) {
     notFound()
@@ -74,6 +75,7 @@ export default async function SessionPage({ params, searchParams }: Props) {
           strippedMessageCount={strippedMessageCount}
           messages={session.messages}
           highlightMessageId={highlight}
+          subagents={subagents}
         />
       </main>
     </div>

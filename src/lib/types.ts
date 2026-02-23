@@ -19,6 +19,8 @@ export interface ChatMessage {
   userType: string
   cwd: string
   sessionId: string
+  agentId?: string
+  slug?: string
   version: string
   gitBranch: string
   type: 'user' | 'assistant' | 'file-history-snapshot'
@@ -66,6 +68,14 @@ export interface ProjectSummary {
 export interface SessionSummary {
   id: string
   encodedPath: string
+  firstMessage: string
+  messageCount: number
+  lastActivity: number
+}
+
+export interface SubagentSummary {
+  agentId: string
+  slug: string
   firstMessage: string
   messageCount: number
   lastActivity: number

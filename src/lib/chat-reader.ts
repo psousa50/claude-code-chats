@@ -7,6 +7,7 @@ import {
   Project,
   ProjectSummary,
   SessionSummary,
+  SubagentSummary,
   TokenUsage,
 } from './types'
 import { isSystemMessage as isSystemMsg, hasNoVisibleContent } from './message-utils'
@@ -565,12 +566,111 @@ export function createChatReader(deps?: ChatReaderDeps) {
     }
   }
 
+  function getSubagentsForSession(
+    encodedProjectPath: string,
+    sessionId: string,
+  ): SubagentSummary[] {
+    const subagentsDir = path.join(projectsDir, encodedProjectPath, sessionId, 'subagents')
+
+    try {
+      if (!fs.existsSync(subagentsDir)) return []
+
+      const files = fs
+        .readdirSync(subagentsDir)
+        .filter((f) => f.startsWith('agent-') && f.endsWith('.jsonl'))
+
+      return files
+        .map((file) => {
+          const agentId = file.replace('agent-', '').replace('.jsonl', '')
+          const filePath = path.join(subagentsDir, file)
+          const messages = parseJsonlFile(filePath)
+
+          if (messages.length === 0) return null
+
+          const firstUserMessage = messages.find((m) => m.type === 'user' && !isSystemMessage(m))
+          const firstMessageText = firstUserMessage
+            ? extractTextFromContent(firstUserMessage.message.content)
+            : 'No messages'
+
+          const timestamps = messages.map((m) => parseTimestamp(m.timestamp)).filter((t) => t > 0)
+          const lastActivity = timestamps.length > 0 ? Math.max(...timestamps) : 0
+          const visibleCount = messages.filter(
+            (m) => !isSystemMsg(m) && !hasNoVisibleContent(m),
+          ).length
+          const slug = messages[0].slug ?? agentId
+
+          return {
+            agentId,
+            slug,
+            firstMessage: firstMessageText.slice(0, 500),
+            messageCount: visibleCount,
+            lastActivity,
+          }
+        })
+        .filter((s): s is SubagentSummary => s !== null)
+        .sort((a, b) => a.lastActivity - b.lastActivity)
+    } catch {
+      return []
+    }
+  }
+
+  function getSubagentById(
+    encodedProjectPath: string,
+    sessionId: string,
+    agentId: string,
+  ): ChatSession | null {
+    const filePath = path.join(
+      projectsDir,
+      encodedProjectPath,
+      sessionId,
+      'subagents',
+      `agent-${agentId}.jsonl`,
+    )
+
+    try {
+      if (!fs.existsSync(filePath)) return null
+
+      const messages = parseJsonlFile(filePath)
+
+      if (messages.length === 0) return null
+
+      const firstUserMessage = messages.find((m) => m.type === 'user' && !isSystemMessage(m))
+      const firstMessageText = firstUserMessage
+        ? extractTextFromContent(firstUserMessage.message.content)
+        : 'No messages'
+
+      const timestamps = messages.map((m) => parseTimestamp(m.timestamp)).filter((t) => t > 0)
+      const lastActivity = timestamps.length > 0 ? Math.max(...timestamps) : 0
+
+      const projectPath = decode(encodedProjectPath)
+      const visibleCount = messages.filter((m) => !isSystemMsg(m) && !hasNoVisibleContent(m)).length
+      const tokenUsage = computeSessionTokens(messages)
+      const slug = messages[0].slug ?? agentId
+
+      return {
+        id: slug,
+        projectPath,
+        projectName: extractProjectName(projectPath),
+        encodedPath: encodedProjectPath,
+        messages,
+        firstMessage: firstMessageText.slice(0, 500),
+        lastActivity,
+        messageCount: visibleCount,
+        ...(tokenUsage && { tokenUsage }),
+      }
+    } catch {
+      return null
+    }
+  }
+
   return {
     getAllProjects,
     getProjectByPath,
     getProjectsSummary,
     getSessionsSummary,
     getSessionById,
+    getSubagentsForSession,
+    getSubagentById,
   }
 }
 
@@ -595,4 +695,10 @@ export function getSessionsSummary(encodedPath: string) {
 }
 export function getSessionById(encodedProjectPath: string, sessionId: string) {
   return getDefault().getSessionById(encodedProjectPath, sessionId)
+}
+export function getSubagentsForSession(encodedProjectPath: string, sessionId: string) {
+  return getDefault().getSubagentsForSession(encodedProjectPath, sessionId)
+}
+export function getSubagentById(encodedProjectPath: string, sessionId: string, agentId: string) {
+  return getDefault().getSubagentById(encodedProjectPath, sessionId, agentId)
 }
