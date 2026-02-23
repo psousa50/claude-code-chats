@@ -49,7 +49,6 @@
     ]
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.2.47",
     "better-sqlite3": "^12.4.6",
     "next": "^15.0.0",
     "react": "^19.0.0",

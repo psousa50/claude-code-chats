@@ -1,5 +1,4 @@
-import { query } from '@anthropic-ai/claude-agent-sdk'
-import { execSync } from 'child_process'
+import { spawn, type ChildProcess } from 'child_process'
 
 export interface ClaudeResponse {
   success: boolean
@@ -7,72 +6,51 @@ export interface ClaudeResponse {
   error?: string
 }
 
-function findClaudeExecutable(): string {
-  try {
-    return execSync('which claude', { encoding: 'utf-8' }).trim()
-  } catch {
-    return 'claude'
-  }
-}
-
-function logClaudeVersion(executable: string): void {
-  try {
-    const version = execSync(`${executable} --version`, { encoding: 'utf-8' }).trim()
-    console.log(`[claude-cli] ${executable} (${version})`)
-  } catch {
-    console.warn(`[claude-cli] ${executable} (version unknown)`)
-  }
-}
-
-export type QueryFn = typeof query
+export type SpawnFn = (command: string, args: string[]) => ChildProcess
 
 export interface ClaudeCliDeps {
-  queryFn?: QueryFn
-  claudeExecutable?: string
+  spawnFn?: SpawnFn
 }
 
 export type ClaudeCliInstance = ReturnType<typeof createClaudeCli>
 
 export function createClaudeCli(deps?: ClaudeCliDeps) {
-  const queryFn = deps?.queryFn ?? query
-  const executable = deps?.claudeExecutable ?? findClaudeExecutable()
+  const spawnFn =
+    deps?.spawnFn ?? ((cmd: string, args: string[]) => spawn(cmd, args, { timeout: 120000 }))
 
-  if (!deps?.claudeExecutable && !deps?.queryFn) {
-    logClaudeVersion(executable)
-  }
+  function invokeClaude(prompt: string): Promise<ClaudeResponse> {
+    return new Promise((resolve) => {
+      const child = spawnFn('claude', ['-p', prompt, '--output-format', 'text'])
 
-  async function invokeClaude(prompt: string): Promise<ClaudeResponse> {
-    const stderrChunks: string[] = []
+      let stdout = ''
+      let stderr = ''
 
-    try {
-      let result = ''
+      child.stdout?.on('data', (data: Buffer) => {
+        stdout += data.toString()
+      })
 
-      for await (const message of queryFn({
-        prompt,
-        options: {
-          allowedTools: [],
-          maxTurns: 1,
-          pathToClaudeCodeExecutable: executable,
-          stderr: (data: string) => stderrChunks.push(data),
-        },
-      })) {
-        if ('result' in message) {
-          result = message.result as string
+      child.stderr?.on('data', (data: Buffer) => {
+        stderr += data.toString()
+      })
+
+      child.on('error', (error: Error) => {
+        resolve({ success: false, output: '', error: `Failed to spawn claude: ${error.message}` })
+      })
+
+      child.on('close', (code: number | null) => {
+        if (code === 0) {
+          resolve({ success: true, output: stdout.trim() })
+        } else {
+          resolve({
+            success: false,
+            output: stdout.trim(),
+            error: stderr || `Process exited with code ${code}`,
+          })
         }
-      }
+      })
 
-      if (!result) {
-        return { success: false, output: '', error: 'No result returned' }
-      }
-
-      return { success: true, output: result.trim() }
-    } catch (error) {
-      const stderr = stderrChunks.join('').trim()
-      const message = error instanceof Error ? error.message : 'Unknown error'
-      const detail = stderr ? `${message} — stderr: ${stderr}` : message
-      console.error('[claude-cli]', detail)
-      return { success: false, output: '', error: detail }
-    }
+      child.stdin?.end()
+    })
   }
 
   async function generateSessionSummary(conversationText: string): Promise<ClaudeResponse> {
