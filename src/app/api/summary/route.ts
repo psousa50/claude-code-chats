@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSummary, saveSummary, getSessionSummaries } from '@/lib/search-db'
-import { getSessionById, getProjectByPath } from '@/lib/chat-reader'
+import { getSessionById, getSubagentById, getProjectByPath } from '@/lib/chat-reader'
 import { generateSessionSummary, generateProjectSummary } from '@/lib/claude-cli'
 import { formatConversationForSummary } from '@/lib/summary-format'
 
@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get('type') as 'session' | 'project' | null
   const projectPath = searchParams.get('project')
   const sessionId = searchParams.get('session')
+  const agentId = searchParams.get('agent')
 
   if (!type || !projectPath) {
     return NextResponse.json(
@@ -19,12 +20,12 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  if (type === 'session' && !sessionId) {
+  if (type === 'session' && !sessionId && !agentId) {
     return NextResponse.json({ error: 'Missing required parameter: session' }, { status: 400 })
   }
 
   try {
-    const targetId = type === 'session' ? sessionId! : projectPath
+    const targetId = agentId ? `subagent:${agentId}` : type === 'session' ? sessionId! : projectPath
     const summary = getSummary(type, targetId, projectPath)
 
     return NextResponse.json({ summary })
@@ -42,10 +43,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const body = await request.json()
-  const { type, projectPath, sessionId } = body as {
+  const { type, projectPath, sessionId, agentId } = body as {
     type: 'session' | 'project'
     projectPath: string
     sessionId?: string
+    agentId?: string
   }
 
   if (!type || !projectPath) {
@@ -55,18 +57,23 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  if (type === 'session' && !sessionId) {
+  if (type === 'session' && !sessionId && !agentId) {
     return NextResponse.json({ error: 'Missing required parameter: sessionId' }, { status: 400 })
   }
 
   try {
     if (type === 'session') {
-      const session = getSessionById(projectPath, sessionId!)
+      const session = agentId
+        ? getSubagentById(projectPath, sessionId!, agentId)
+        : getSessionById(projectPath, sessionId!)
+
       if (!session) {
         return NextResponse.json({ error: 'Session not found' }, { status: 404 })
       }
 
-      const conversationText = formatConversationForSummary(session.messages)
+      const conversationText = formatConversationForSummary(session.messages, {
+        includeSidechain: !!agentId,
+      })
       const result = await generateSessionSummary(conversationText)
 
       if (!result.success) {
@@ -76,9 +83,10 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      const targetId = agentId ? `subagent:${agentId}` : sessionId!
       const summary = saveSummary({
         type: 'session',
-        targetId: sessionId!,
+        targetId,
         projectPath,
         content: result.output,
         createdAt: Date.now(),

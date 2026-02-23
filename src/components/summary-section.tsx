@@ -7,6 +7,7 @@ interface SummarySectionProps {
   type: 'session' | 'project'
   projectPath: string
   sessionId?: string
+  agentId?: string
   messageCount: number
 }
 
@@ -14,6 +15,7 @@ export function SummarySection({
   type,
   projectPath,
   sessionId,
+  agentId,
   messageCount,
 }: SummarySectionProps) {
   const [summary, setSummary] = useState<AISummary | null>(null)
@@ -26,6 +28,7 @@ export function SummarySection({
       try {
         const params = new URLSearchParams({ type, project: projectPath })
         if (sessionId) params.append('session', sessionId)
+        if (agentId) params.append('agent', agentId)
 
         const response = await fetch(`/api/summary?${params}`)
         const data = await response.json()
@@ -47,7 +50,7 @@ export function SummarySection({
       const response = await fetch('/api/summary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, projectPath, sessionId }),
+        body: JSON.stringify({ type, projectPath, sessionId, agentId }),
       })
 
       const data = await response.json()

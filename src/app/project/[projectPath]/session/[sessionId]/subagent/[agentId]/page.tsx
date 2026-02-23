@@ -6,6 +6,7 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import { FontSizeToggle } from '@/components/font-size-toggle'
 import { SyncButton } from '@/components/sync-button'
 import { ChatView } from '@/components/chat-view'
+import { SummarySection } from '@/components/summary-section'
 import { isSystemMessage, hasNoVisibleContent } from '@/lib/message-utils'
 import { formatRelativeTime, formatDateTime, formatTokenCount } from '@/lib/format'
 
@@ -120,6 +121,16 @@ export default async function SubagentPage({ params }: Props) {
               </span>
             </div>
           )}
+        </div>
+
+        <div className="mb-6 animate-in stagger-1">
+          <SummarySection
+            type="session"
+            projectPath={projectPath}
+            sessionId={sessionId}
+            agentId={agentId}
+            messageCount={agent.messageCount}
+          />
         </div>
 
         <ChatView messages={agent.messages} showHidden={false} />

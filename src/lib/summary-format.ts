@@ -16,9 +16,15 @@ export function truncateAssistant(text: string, limit: number): string {
   return text.slice(0, half) + ' [...] ' + text.slice(-half)
 }
 
-export function buildPairs(messages: ChatMessage[]): ConversationPair[] {
+export function buildPairs(
+  messages: ChatMessage[],
+  { includeSidechain = false } = {},
+): ConversationPair[] {
   const meaningful = messages.filter(
-    (m) => !isSystemMessage(m) && !m.isSidechain && m.type !== 'file-history-snapshot',
+    (m) =>
+      !isSystemMessage(m) &&
+      (includeSidechain || !m.isSidechain) &&
+      m.type !== 'file-history-snapshot',
   )
 
   const pairs: ConversationPair[] = []
@@ -68,8 +74,11 @@ export function samplePairs(pairs: ConversationPair[]): ConversationPair[] {
   return [...first, ...sampled, ...last]
 }
 
-export function formatConversationForSummary(messages: ChatMessage[]): string {
-  const pairs = buildPairs(messages)
+export function formatConversationForSummary(
+  messages: ChatMessage[],
+  { includeSidechain = false } = {},
+): string {
+  const pairs = buildPairs(messages, { includeSidechain })
   const sampled = samplePairs(pairs)
 
   let output = ''
