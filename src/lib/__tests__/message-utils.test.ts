@@ -4,6 +4,7 @@ import {
   extractAllTextFromContent,
   isSystemMessage,
   hasNoVisibleContent,
+  parseCommandInvocation,
 } from '../message-utils'
 import { makeChatMessage, makeUserMessage, makeAssistantMessage } from './helpers'
 
@@ -78,15 +79,46 @@ describe('extractAllTextFromContent', () => {
   })
 })
 
+describe('parseCommandInvocation', () => {
+  it('parses simple command-name only format', () => {
+    expect(parseCommandInvocation('<command-name>/clear</command-name>')).toEqual({
+      name: '/clear',
+      args: '',
+    })
+  })
+
+  it('parses full format with command-message and args', () => {
+    expect(
+      parseCommandInvocation(
+        '<command-message>develop:story</command-message><command-name>/develop:story</command-name><command-args>BSAI-11</command-args>',
+      ),
+    ).toEqual({ name: '/develop:story', args: 'BSAI-11' })
+  })
+
+  it('returns null for regular message', () => {
+    expect(parseCommandInvocation('Hello world')).toBeNull()
+  })
+
+  it('returns null for system-reminder', () => {
+    expect(parseCommandInvocation('<system-reminder>Plan mode</system-reminder>')).toBeNull()
+  })
+
+  it('handles empty args tag', () => {
+    expect(
+      parseCommandInvocation('<command-name>/help</command-name><command-args></command-args>'),
+    ).toEqual({ name: '/help', args: '' })
+  })
+})
+
 describe('isSystemMessage', () => {
   it('returns true for isMeta messages', () => {
     const msg = makeChatMessage({ isMeta: true })
     expect(isSystemMessage(msg)).toBe(true)
   })
 
-  it('returns true for <command-name> prefix', () => {
+  it('returns false for <command-name> prefix (command invocations are rendered inline)', () => {
     const msg = makeUserMessage('<command-name>/clear</command-name>')
-    expect(isSystemMessage(msg)).toBe(true)
+    expect(isSystemMessage(msg)).toBe(false)
   })
 
   it('returns true for <local-command- prefix', () => {
@@ -125,7 +157,7 @@ describe('isSystemMessage', () => {
       type: 'user',
       message: {
         role: 'user',
-        content: [{ type: 'text', text: '<command-name>/help</command-name>' }],
+        content: [{ type: 'text', text: '<system-reminder>Plan mode</system-reminder>' }],
       },
     })
     expect(isSystemMessage(msg)).toBe(true)

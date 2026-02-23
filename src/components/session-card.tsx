@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { SessionSummary } from '@/lib/types'
 import { formatRelativeTime } from '@/lib/format'
+import { parseCommandInvocation } from '@/lib/message-utils'
 
 interface SessionCardProps {
   session: SessionSummary
@@ -8,6 +9,13 @@ interface SessionCardProps {
 }
 
 export function SessionCard({ session, encodedPath }: SessionCardProps) {
+  const cmd = session.firstMessage ? parseCommandInvocation(session.firstMessage) : null
+  const preview = cmd
+    ? cmd.args
+      ? `${cmd.name} ${cmd.args}`
+      : cmd.name
+    : session.firstMessage || 'Empty session'
+
   return (
     <Link
       href={`/project/${encodedPath}/session/${session.id}`}
@@ -15,8 +23,10 @@ export function SessionCard({ session, encodedPath }: SessionCardProps) {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-content-primary line-clamp-2 group-hover:text-accent transition-colors">
-            {session.firstMessage || 'Empty session'}
+          <p
+            className={`text-sm text-content-primary line-clamp-2 group-hover:text-accent transition-colors ${cmd ? 'font-mono' : ''}`}
+          >
+            {preview}
           </p>
         </div>
         <div className="flex items-center gap-1 text-content-tertiary group-hover:text-accent shrink-0 transition-colors">

@@ -23,11 +23,24 @@ export function extractAllTextFromContent(content: ChatMessage['message']['conte
     .join('\n')
 }
 
+export function parseCommandInvocation(text: string): { name: string; args: string } | null {
+  if (!text.startsWith('<command-name>') && !text.startsWith('<command-message>')) return null
+
+  const nameMatch = text.match(/<command-name>([^<]+)<\/command-name>/)
+  if (!nameMatch) return null
+
+  const argsMatch = text.match(/<command-args>([^<]*)<\/command-args>/)
+
+  return {
+    name: nameMatch[1].trim(),
+    args: argsMatch ? argsMatch[1].trim() : '',
+  }
+}
+
 export function isSystemMessage(message: ChatMessage): boolean {
   if (message.isMeta) return true
 
   const text = extractTextFromContent(message.message.content)
-  if (text.startsWith('<command-name>')) return true
   if (text.startsWith('<local-command-')) return true
   if (text.startsWith('Caveat:')) return true
   if (text.startsWith('<system-reminder>')) return true

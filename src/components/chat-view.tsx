@@ -3,8 +3,14 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { ChatMessage } from '@/lib/types'
 import { MessageBubble } from './message-bubble'
+import { CommandInvocationBubble } from './command-invocation-bubble'
 import { parseTimestamp } from '@/lib/format'
-import { isSystemMessage, hasNoVisibleContent } from '@/lib/message-utils'
+import {
+  isSystemMessage,
+  hasNoVisibleContent,
+  parseCommandInvocation,
+  extractTextFromContent,
+} from '@/lib/message-utils'
 
 interface ChatViewProps {
   messages: ChatMessage[]
@@ -49,7 +55,19 @@ export function ChatView({
             ref={isHighlighted ? highlightRef : undefined}
             className={`${isHighlighted ? 'ring-2 ring-accent ring-offset-2 ring-offset-base rounded-2xl' : ''} animate-in stagger-${Math.min(i + 1, 10)}`}
           >
-            <MessageBubble message={message} compact={!showAll} />
+            {(() => {
+              const text = extractTextFromContent(message.message.content)
+              const cmd = parseCommandInvocation(text)
+              return cmd ? (
+                <CommandInvocationBubble
+                  name={cmd.name}
+                  args={cmd.args}
+                  timestamp={message.timestamp}
+                />
+              ) : (
+                <MessageBubble message={message} compact={!showAll} />
+              )
+            })()}
           </div>
         )
       })}
