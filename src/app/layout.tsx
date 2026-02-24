@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { DM_Sans, JetBrains_Mono } from 'next/font/google'
 import { ThemeProvider } from '@/components/theme-provider'
 import { FontSizeProvider } from '@/components/font-size-provider'
+import { AutoSync } from '@/components/auto-sync'
 import './globals.css'
 
 const dmSans = DM_Sans({
@@ -33,7 +34,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className={`${dmSans.variable} ${jetbrainsMono.variable} font-sans min-h-screen antialiased`}
       >
         <ThemeProvider>
-          <FontSizeProvider>{children}</FontSizeProvider>
+          <FontSizeProvider>
+            <AutoSync />
+            {children}
+          </FontSizeProvider>
         </ThemeProvider>
       </body>
     </html>
