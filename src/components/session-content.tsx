@@ -9,6 +9,7 @@ import { DuplicateSessionButton } from './duplicate-session-button'
 import { DeleteSessionButton } from './delete-session-button'
 import { SummarySection } from './summary-section'
 import { SubagentList } from './subagent-list'
+import { ExportButton } from './export-button'
 import { SubagentSummary } from '@/lib/types'
 
 interface TokenUsage {
@@ -120,6 +121,7 @@ export function SessionContent({
         )}
 
         <div className="border-t border-edge-subtle px-4 py-2.5 flex items-center justify-end gap-2">
+          <ExportButton encodedPath={projectPath} sessionId={sessionId} />
           <DuplicateSessionButton
             encodedPath={projectPath}
             sessionId={sessionId}

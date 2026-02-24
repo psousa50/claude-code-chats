@@ -7,6 +7,7 @@ import { FontSizeToggle } from '@/components/font-size-toggle'
 import { SyncButton } from '@/components/sync-button'
 import { ChatView } from '@/components/chat-view'
 import { SummarySection } from '@/components/summary-section'
+import { ExportButton } from '@/components/export-button'
 import { isSystemMessage, hasNoVisibleContent } from '@/lib/message-utils'
 import { formatRelativeTime, formatDateTime, formatTokenCount } from '@/lib/format'
 
@@ -121,6 +122,10 @@ export default async function SubagentPage({ params }: Props) {
               </span>
             </div>
           )}
+
+          <div className="border-t border-edge-subtle px-4 py-2.5 flex items-center justify-end">
+            <ExportButton encodedPath={projectPath} sessionId={sessionId} agentId={agentId} />
+          </div>
         </div>
 
         <div className="mb-6 animate-in stagger-1">
