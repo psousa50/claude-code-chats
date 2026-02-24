@@ -121,6 +121,28 @@ export function SessionContent({
         )}
 
         <div className="border-t border-edge-subtle px-4 py-2.5 flex items-center justify-end gap-2">
+          {subagents && subagents.length > 0 && (
+            <button
+              onClick={() => {
+                const el = document.getElementById('subagents')
+                if (el) {
+                  const top = el.getBoundingClientRect().top + window.scrollY - 80
+                  window.scrollTo({ top, behavior: 'smooth' })
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-accent hover:text-accent-hover hover:bg-accent/10 border border-accent/20 rounded-lg transition-all mr-auto"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"
+                />
+              </svg>
+              {subagents.length} sub-agent{subagents.length !== 1 ? 's' : ''}
+            </button>
+          )}
           <ExportButton encodedPath={projectPath} sessionId={sessionId} />
           <DuplicateSessionButton
             encodedPath={projectPath}
@@ -145,6 +167,7 @@ export function SessionContent({
         messages={messages}
         highlightMessageId={highlightMessageId}
         showHidden={showHidden}
+        subagents={subagents}
       />
 
       {subagents && subagents.length > 0 && (

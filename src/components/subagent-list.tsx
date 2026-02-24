@@ -12,7 +12,7 @@ export function SubagentList({ subagents, projectPath, sessionId }: SubagentList
   if (subagents.length === 0) return null
 
   return (
-    <div className="mt-8 animate-in stagger-2">
+    <div id="subagents" className="mt-8 animate-in stagger-2">
       <h2 className="text-sm font-medium text-content-secondary mb-3 flex items-center gap-2">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -28,6 +28,7 @@ export function SubagentList({ subagents, projectPath, sessionId }: SubagentList
         {subagents.map((agent) => (
           <Link
             key={agent.agentId}
+            id={`subagent-${agent.agentId}`}
             href={`/project/${projectPath}/session/${sessionId}/subagent/${agent.agentId}`}
             className="block bg-surface border border-edge-subtle rounded-lg px-4 py-3 hover:border-edge-hover hover:bg-surface-elevated transition-all group"
           >
