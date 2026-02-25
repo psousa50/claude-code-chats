@@ -15,12 +15,13 @@ export interface ClaudeCliDeps {
 export type ClaudeCliInstance = ReturnType<typeof createClaudeCli>
 
 export function createClaudeCli(deps?: ClaudeCliDeps) {
+  const claudeBin = process.env.CLAUDE_PATH ?? 'claude'
   const spawnFn =
     deps?.spawnFn ?? ((cmd: string, args: string[]) => spawn(cmd, args, { timeout: 120000 }))
 
   function invokeClaude(prompt: string): Promise<ClaudeResponse> {
     return new Promise((resolve) => {
-      const child = spawnFn('claude', ['-p', prompt, '--output-format', 'text'])
+      const child = spawnFn(claudeBin, ['-p', prompt, '--output-format', 'text'])
 
       let stdout = ''
       let stderr = ''
