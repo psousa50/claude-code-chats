@@ -177,12 +177,19 @@ export async function POST(request: NextRequest) {
       const survivingParent = findSurvivingParent(msg.parentUuid)
       const newParentUuid = survivingParent ? (oldToNewUuid.get(survivingParent) ?? null) : null
 
-      return {
+      const duplicated = {
         ...msg,
         uuid: newUuid,
         parentUuid: newParentUuid,
         sessionId: newSessionId,
+        ...(msg.message && { message: { ...msg.message } }),
       }
+
+      if (duplicated.message) {
+        delete (duplicated.message as Record<string, unknown>).usage
+      }
+
+      return duplicated
     })
 
     const destFile = path.join(projectDir, `${newSessionId}.jsonl`)
