@@ -77,6 +77,14 @@ export function ProjectHeader({
                 </button>
               )}
               <button
+                onClick={() => {
+                  window.location.href = `/api/project/export?path=${encodeURIComponent(encodedPath)}`
+                }}
+                className="px-2.5 py-1.5 text-xs font-medium text-accent hover:text-accent-hover hover:bg-accent/10 border border-accent/20 rounded-lg transition-all"
+              >
+                Export
+              </button>
+              <button
                 onClick={() => setIsRenameOpen(true)}
                 className="px-2.5 py-1.5 text-xs font-medium text-accent hover:text-accent-hover hover:bg-accent/10 border border-accent/20 rounded-lg transition-all"
               >

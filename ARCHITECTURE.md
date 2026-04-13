@@ -104,19 +104,20 @@ Schema versioned with incremental migrations (currently v1).
 
 ## API Surface
 
-| Method | Route                                         | Purpose                               |
-| ------ | --------------------------------------------- | ------------------------------------- |
-| GET    | `/api/projects`                               | List all projects with summary stats  |
-| GET    | `/api/projects/sessions?path=`                | Sessions for a project                |
-| GET    | `/api/projects/memory?path=`                  | Memory .md files for a project        |
-| GET    | `/api/search?q=&project=&limit=`              | Full-text search (syncs index first)  |
-| POST   | `/api/sync`                                   | Manual index rebuild                  |
-| GET    | `/api/summary?type=&project=&session=&agent=` | Fetch cached summary                  |
-| POST   | `/api/summary`                                | Generate AI summary via Claude CLI    |
-| POST   | `/api/session/delete`                         | Delete session JSONL file             |
-| POST   | `/api/session/duplicate`                      | Clone session with optional filtering |
-| GET    | `/api/session/export`                         | Download session as markdown          |
-| POST   | `/api/project/rename`                         | Rename project folder + update index  |
+| Method | Route                                         | Purpose                                     |
+| ------ | --------------------------------------------- | ------------------------------------------- |
+| GET    | `/api/projects`                               | List all projects with summary stats        |
+| GET    | `/api/projects/sessions?path=`                | Sessions for a project                      |
+| GET    | `/api/projects/memory?path=`                  | Memory .md files for a project              |
+| GET    | `/api/search?q=&project=&limit=`              | Full-text search (syncs index first)        |
+| POST   | `/api/sync`                                   | Manual index rebuild                        |
+| GET    | `/api/summary?type=&project=&session=&agent=` | Fetch cached summary                        |
+| POST   | `/api/summary`                                | Generate AI summary via Claude CLI          |
+| POST   | `/api/session/delete`                         | Delete session JSONL file                   |
+| POST   | `/api/session/duplicate`                      | Clone session with optional filtering       |
+| GET    | `/api/session/export`                         | Download session as markdown                |
+| GET    | `/api/project/export?path=`                   | Download all sessions as text-only markdown |
+| POST   | `/api/project/rename`                         | Rename project folder + update index        |
 
 ## Configuration
 
