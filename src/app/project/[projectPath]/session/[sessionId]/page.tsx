@@ -6,7 +6,7 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import { FontSizeToggle } from '@/components/font-size-toggle'
 import { SyncButton } from '@/components/sync-button'
 import { SessionContent } from '@/components/session-content'
-import { isSystemMessage, hasNoVisibleContent } from '@/lib/message-utils'
+import { isSystemMessage, hasNoVisibleContent, parseCommandInvocation } from '@/lib/message-utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,6 +30,10 @@ export default async function SessionPage({ params, searchParams }: Props) {
     (m) => !isSystemMessage(m) && !hasNoVisibleContent(m),
   ).length
 
+  const cmd = session.firstMessage ? parseCommandInvocation(session.firstMessage) : null
+  const previewText = cmd ? (cmd.args ? `${cmd.name} ${cmd.args}` : cmd.name) : session.firstMessage
+  const sessionTitle = previewText || `Session ${session.id.slice(0, 8)}`
+
   return (
     <div className="min-h-screen">
       <header className="border-b border-edge-subtle bg-surface/80 backdrop-blur-md sticky top-0 z-10">
@@ -49,10 +53,21 @@ export default async function SessionPage({ params, searchParams }: Props) {
               </svg>
             </Link>
             <div className="flex-1 min-w-0 hidden sm:block">
-              <h1 className="text-lg font-medium text-content-primary truncate">
-                {session.projectName}
+              <h1
+                className={`text-lg font-medium text-content-primary truncate ${cmd ? 'font-mono' : ''}`}
+              >
+                {sessionTitle}
               </h1>
-              <p className="text-xs text-content-tertiary truncate font-mono">{session.id}</p>
+              <p className="truncate">
+                <Link
+                  href={`/project/${projectPath}`}
+                  className="text-sm text-content-secondary hover:text-content-primary hover:underline transition-colors"
+                >
+                  {session.projectName}
+                </Link>
+                <span className="mx-1.5 text-xs text-content-tertiary/60">›</span>
+                <span className="text-xs text-content-tertiary font-mono">{session.id}</span>
+              </p>
             </div>
             <div className="flex-1 max-w-md">
               <GlobalSearch projectPath={projectPath} />
