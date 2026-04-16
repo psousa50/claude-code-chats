@@ -124,6 +124,7 @@ Schema versioned with incremental migrations (currently v3).
 | POST   | `/api/session/delete`                         | Delete session JSONL file                   |
 | POST   | `/api/session/duplicate`                      | Clone session with optional filtering       |
 | GET    | `/api/session/export`                         | Download session as markdown                |
+| POST   | `/api/session/restore`                        | Copy archived session back to live location |
 | GET    | `/api/project/export?path=`                   | Download all sessions as text-only markdown |
 | POST   | `/api/project/rename`                         | Rename project folder + update index        |
 

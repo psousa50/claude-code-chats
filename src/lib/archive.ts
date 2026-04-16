@@ -98,6 +98,40 @@ function copyIfNewer(src: string, dest: string): boolean {
   return true
 }
 
+export type RestoreOutcome = 'restored' | 'already-live' | 'not-archived'
+
+export function restoreFromArchive(
+  encodedPath: string,
+  sessionId: string,
+  deps?: ArchiveDeps,
+): RestoreOutcome {
+  const liveDir = getLiveDir(deps)
+  const archiveDir = getArchiveDir(deps)
+
+  const liveFile = path.join(liveDir, encodedPath, `${sessionId}.jsonl`)
+  const archiveFile = path.join(archiveDir, encodedPath, `${sessionId}.jsonl`)
+
+  if (fs.existsSync(liveFile)) return 'already-live'
+  if (!fs.existsSync(archiveFile)) return 'not-archived'
+
+  fs.mkdirSync(path.dirname(liveFile), { recursive: true })
+  fs.copyFileSync(archiveFile, liveFile)
+  const now = new Date()
+  fs.utimesSync(liveFile, now, now)
+
+  const archiveSubagentDir = path.join(archiveDir, encodedPath, sessionId, 'subagents')
+  if (fs.existsSync(archiveSubagentDir)) {
+    const liveSubagentDir = path.join(liveDir, encodedPath, sessionId, 'subagents')
+    fs.mkdirSync(liveSubagentDir, { recursive: true })
+    for (const file of fs.readdirSync(archiveSubagentDir)) {
+      if (!file.endsWith('.jsonl')) continue
+      fs.copyFileSync(path.join(archiveSubagentDir, file), path.join(liveSubagentDir, file))
+    }
+  }
+
+  return 'restored'
+}
+
 export function removeFromArchive(
   encodedPath: string,
   sessionId: string,

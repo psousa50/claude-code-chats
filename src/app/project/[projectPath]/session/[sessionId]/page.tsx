@@ -98,6 +98,7 @@ export default async function SessionPage({ params, searchParams }: Props) {
           messages={session.messages}
           highlightMessageId={highlight}
           subagents={subagents}
+          isArchived={session.isArchived}
         />
       </main>
     </div>

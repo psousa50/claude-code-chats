@@ -30,6 +30,7 @@ interface SessionContentProps {
   messages: ChatMessage[]
   highlightMessageId?: string
   subagents?: SubagentSummary[]
+  isArchived?: boolean
 }
 
 export function SessionContent({
@@ -43,6 +44,7 @@ export function SessionContent({
   messages,
   highlightMessageId,
   subagents,
+  isArchived,
 }: SessionContentProps) {
   const [showHidden, setShowHidden] = useState(false)
 
@@ -87,7 +89,11 @@ export function SessionContent({
         </div>
 
         <div className="border-t border-edge-subtle px-4 py-3">
-          <ResumeCommandCopy sessionId={sessionId} />
+          <ResumeCommandCopy
+            sessionId={sessionId}
+            encodedPath={projectPath}
+            isArchived={isArchived}
+          />
         </div>
 
         {tokenUsage && (

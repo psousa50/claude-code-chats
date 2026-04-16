@@ -11,7 +11,7 @@ import {
 } from 'fs'
 import path from 'path'
 import os from 'os'
-import { mirrorLiveToArchive, removeFromArchive } from '../archive'
+import { mirrorLiveToArchive, removeFromArchive, restoreFromArchive } from '../archive'
 
 let tmpDir: string
 let liveDir: string
@@ -107,6 +107,58 @@ describe('mirrorLiveToArchive', () => {
     const result = mirrorLiveToArchive({ liveDir, archiveDir })
     expect(result.copied).toBe(0)
     expect(existsSync(path.join(archiveDir, 'proj', 'notes.txt'))).toBe(false)
+  })
+})
+
+describe('restoreFromArchive', () => {
+  it('returns not-archived when no archive copy exists', () => {
+    expect(restoreFromArchive('missing', 'missing', { liveDir, archiveDir })).toBe('not-archived')
+  })
+
+  it('returns already-live when live file still exists', () => {
+    writeLiveSession('proj', 's1', 'live-data')
+    mirrorLiveToArchive({ liveDir, archiveDir })
+
+    expect(restoreFromArchive('proj', 's1', { liveDir, archiveDir })).toBe('already-live')
+  })
+
+  it('copies archive jsonl back to live when live is gone', () => {
+    const live = writeLiveSession('proj', 's1', 'original-content')
+    mirrorLiveToArchive({ liveDir, archiveDir })
+    rmSync(live)
+
+    expect(restoreFromArchive('proj', 's1', { liveDir, archiveDir })).toBe('restored')
+    expect(readFileSync(live, 'utf-8')).toBe('original-content')
+  })
+
+  it('resets mtime to now on the restored file', () => {
+    const live = writeLiveSession('proj', 's1', 'data')
+    const oldMtime = new Date('2026-02-01T12:00:00Z')
+    utimesSync(live, oldMtime, oldMtime)
+    mirrorLiveToArchive({ liveDir, archiveDir })
+    rmSync(live)
+
+    const before = Date.now()
+    restoreFromArchive('proj', 's1', { liveDir, archiveDir })
+    const restoredMtime = statSync(live).mtime.getTime()
+
+    expect(restoredMtime).toBeGreaterThanOrEqual(before)
+    expect(restoredMtime).not.toBe(oldMtime.getTime())
+  })
+
+  it('restores subagent jsonl files alongside the session', () => {
+    writeLiveSession('proj', 's1', 'session')
+    const liveSubagents = path.join(liveDir, 'proj', 's1', 'subagents')
+    mkdirSync(liveSubagents, { recursive: true })
+    writeFileSync(path.join(liveSubagents, 'agent-abc.jsonl'), 'agent-body')
+
+    mirrorLiveToArchive({ liveDir, archiveDir })
+    rmSync(path.join(liveDir, 'proj'), { recursive: true })
+
+    restoreFromArchive('proj', 's1', { liveDir, archiveDir })
+
+    expect(readFileSync(path.join(liveDir, 'proj', 's1.jsonl'), 'utf-8')).toBe('session')
+    expect(readFileSync(path.join(liveSubagents, 'agent-abc.jsonl'), 'utf-8')).toBe('agent-body')
   })
 })
 
