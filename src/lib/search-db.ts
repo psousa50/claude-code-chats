@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { AISummary, ChatMessage } from './types'
 import { decodeProjectPath as defaultDecodeProjectPath } from './chat-reader'
+import { DEFAULT_ARCHIVE_DIR, mirrorLiveToArchive } from './archive'
 
 const CLAUDE_DIR = path.join(process.env.HOME || '', '.claude')
 const DEFAULT_PROJECTS_DIR = path.join(CLAUDE_DIR, 'projects')
@@ -46,6 +47,9 @@ const migrations: ((db: Database.Database) => void)[] = [
     db.exec("ALTER TABLE indexed_files ADD COLUMN first_message TEXT NOT NULL DEFAULT ''")
     db.exec('DELETE FROM indexed_files')
     db.exec('DELETE FROM messages_fts')
+  },
+  (db) => {
+    db.exec('ALTER TABLE indexed_files ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0')
   },
 ]
 
@@ -118,6 +122,7 @@ interface FileInfo {
   sessionId: string
   projectPath: string
   encodedPath: string
+  isArchived: boolean
 }
 
 export interface SearchResult {
@@ -135,6 +140,7 @@ export interface SearchResult {
 export interface SearchDbDeps {
   dbPath?: string
   projectsDir?: string
+  archiveDir?: string
   decodeProjectPath?: (encoded: string) => string
 }
 
@@ -142,43 +148,61 @@ export type SearchDbInstance = ReturnType<typeof createSearchDb>
 
 export function createSearchDb(deps?: SearchDbDeps) {
   const projectsDir = deps?.projectsDir ?? DEFAULT_PROJECTS_DIR
+  const archiveDir = deps?.archiveDir ?? DEFAULT_ARCHIVE_DIR
   const decode = deps?.decodeProjectPath ?? defaultDecodeProjectPath
   const db = new Database(deps?.dbPath ?? DEFAULT_DB_PATH)
   initDatabase(db)
 
-  function getAllJsonlFiles(): FileInfo[] {
-    const files: FileInfo[] = []
+  function scanRoot(root: string, isArchived: boolean): FileInfo[] {
+    const out: FileInfo[] = []
+    if (!fs.existsSync(root)) return out
 
-    if (!fs.existsSync(projectsDir)) {
-      return files
-    }
-
-    const projectDirs = fs.readdirSync(projectsDir)
-
-    for (const dir of projectDirs) {
-      const projectDirPath = path.join(projectsDir, dir)
-      const stat = fs.statSync(projectDirPath)
-
+    for (const dir of fs.readdirSync(root)) {
+      const projectDirPath = path.join(root, dir)
+      let stat: fs.Stats
+      try {
+        stat = fs.statSync(projectDirPath)
+      } catch {
+        continue
+      }
       if (!stat.isDirectory()) continue
 
-      const sessionFiles = fs.readdirSync(projectDirPath)
-      for (const file of sessionFiles) {
+      for (const file of fs.readdirSync(projectDirPath)) {
         if (!file.endsWith('.jsonl') || file.startsWith('agent-')) continue
 
         const filePath = path.join(projectDirPath, file)
-        const fileStat = fs.statSync(filePath)
+        let fileStat: fs.Stats
+        try {
+          fileStat = fs.statSync(filePath)
+        } catch {
+          continue
+        }
 
-        files.push({
+        out.push({
           path: filePath,
           mtime: fileStat.mtime.getTime(),
           sessionId: file.replace('.jsonl', ''),
           projectPath: decode(dir),
           encodedPath: dir,
+          isArchived,
         })
       }
     }
+    return out
+  }
 
-    return files
+  function getAllJsonlFiles(): FileInfo[] {
+    const live = scanRoot(projectsDir, false)
+    const archived = scanRoot(archiveDir, true)
+
+    const liveKeys = new Set(live.map((f) => `${f.encodedPath}/${f.sessionId}`))
+    const merged = [...live]
+    for (const f of archived) {
+      if (!liveKeys.has(`${f.encodedPath}/${f.sessionId}`)) {
+        merged.push(f)
+      }
+    }
+    return merged
   }
 
   function indexFile(fileInfo: FileInfo): void {
@@ -212,8 +236,8 @@ export function createSearchDb(deps?: SearchDbDeps) {
     }
 
     const upsertFile = db.prepare(`
-      INSERT OR REPLACE INTO indexed_files (path, mtime, session_id, project_path, visible_message_count, first_message)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT OR REPLACE INTO indexed_files (path, mtime, session_id, project_path, visible_message_count, first_message, is_archived)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `)
 
     upsertFile.run(
@@ -223,6 +247,7 @@ export function createSearchDb(deps?: SearchDbDeps) {
       fileInfo.encodedPath,
       visibleCount,
       firstMessage,
+      fileInfo.isArchived ? 1 : 0,
     )
   }
 
@@ -242,14 +267,19 @@ export function createSearchDb(deps?: SearchDbDeps) {
   }
 
   function syncIndex(): { added: number; updated: number; removed: number } {
+    mirrorLiveToArchive({ liveDir: projectsDir, archiveDir })
     const currentFiles = getAllJsonlFiles()
-    const currentFilePaths = new Set(currentFiles.map((f) => f.path))
+    const currentKeys = new Set(currentFiles.map((f) => `${f.encodedPath}/${f.sessionId}`))
 
-    const indexedFiles = db.prepare('SELECT path, mtime FROM indexed_files').all() as {
+    const indexedFiles = db
+      .prepare('SELECT path, mtime, session_id, project_path FROM indexed_files')
+      .all() as {
       path: string
       mtime: number
+      session_id: string
+      project_path: string
     }[]
-    const indexedFileMap = new Map(indexedFiles.map((f) => [f.path, f.mtime]))
+    const indexedByKey = new Map(indexedFiles.map((f) => [`${f.project_path}/${f.session_id}`, f]))
 
     let added = 0
     let updated = 0
@@ -257,21 +287,22 @@ export function createSearchDb(deps?: SearchDbDeps) {
 
     const transaction = db.transaction(() => {
       for (const fileInfo of currentFiles) {
-        const indexedMtime = indexedFileMap.get(fileInfo.path)
+        const key = `${fileInfo.encodedPath}/${fileInfo.sessionId}`
+        const existing = indexedByKey.get(key)
 
-        if (indexedMtime === undefined) {
+        if (!existing) {
           indexFile(fileInfo)
           added++
-        } else if (indexedMtime < fileInfo.mtime) {
-          removeFileFromIndex(fileInfo.path)
+        } else if (existing.path !== fileInfo.path || existing.mtime < fileInfo.mtime) {
+          removeFileFromIndex(existing.path)
           indexFile(fileInfo)
           updated++
         }
       }
 
-      for (const [filePath] of indexedFileMap) {
-        if (!currentFilePaths.has(filePath)) {
-          removeFileFromIndex(filePath)
+      for (const [key, existing] of indexedByKey) {
+        if (!currentKeys.has(key)) {
+          removeFileFromIndex(existing.path)
           removed++
         }
       }
@@ -453,11 +484,12 @@ export function createSearchDb(deps?: SearchDbDeps) {
     firstMessage: string
     messageCount: number
     lastActivity: number
+    isArchived: boolean
   }[] {
     const rows = db
       .prepare(
         `
-      SELECT session_id, first_message, visible_message_count, mtime
+      SELECT session_id, first_message, visible_message_count, mtime, is_archived
       FROM indexed_files
       WHERE project_path = ? AND visible_message_count > 0 AND first_message != ''
       ORDER BY mtime DESC
@@ -468,6 +500,7 @@ export function createSearchDb(deps?: SearchDbDeps) {
       first_message: string
       visible_message_count: number
       mtime: number
+      is_archived: number
     }[]
 
     return rows.map((row) => ({
@@ -475,6 +508,7 @@ export function createSearchDb(deps?: SearchDbDeps) {
       firstMessage: row.first_message,
       messageCount: row.visible_message_count,
       lastActivity: row.mtime,
+      isArchived: row.is_archived === 1,
     }))
   }
 

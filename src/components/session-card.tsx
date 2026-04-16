@@ -29,10 +29,17 @@ export function SessionCard({ session, encodedPath }: SessionCardProps) {
             {preview}
           </p>
         </div>
-        <div className="flex items-center gap-1 text-content-tertiary group-hover:text-accent shrink-0 transition-colors">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
+        <div className="flex items-center gap-2 shrink-0">
+          {session.isArchived && (
+            <span className="text-[10px] uppercase tracking-wider font-medium text-content-tertiary border border-edge-subtle rounded px-1.5 py-0.5">
+              Archived
+            </span>
+          )}
+          <span className="flex items-center text-content-tertiary group-hover:text-accent transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </span>
         </div>
       </div>
 

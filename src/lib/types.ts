@@ -43,6 +43,7 @@ export interface ChatSession {
   lastActivity: number
   messageCount: number
   tokenUsage?: TokenUsage
+  isArchived?: boolean
 }
 
 export interface Project {
@@ -71,6 +72,7 @@ export interface SessionSummary {
   firstMessage: string
   messageCount: number
   lastActivity: number
+  isArchived?: boolean
 }
 
 export interface SubagentSummary {

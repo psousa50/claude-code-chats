@@ -15,6 +15,7 @@ import {
   getProjectStats as defaultGetProjectStats,
   getSessionSummariesFromDb as defaultGetSessionSummariesFromDb,
 } from './search-db'
+import { DEFAULT_ARCHIVE_DIR } from './archive'
 
 const CLAUDE_DIR = path.join(process.env.HOME || '', '.claude')
 const DEFAULT_PROJECTS_DIR = path.join(CLAUDE_DIR, 'projects')
@@ -264,6 +265,7 @@ function countVisibleMessages(filePath: string): number {
 
 export interface ChatReaderDeps {
   projectsDir?: string
+  archiveDir?: string
   decodeProjectPath?: (encoded: string) => string
   getProjectStats?: () => Map<string, { sessionCount: number; totalMessages: number }>
   getSessionSummariesFromDb?: (encodedPath: string) => {
@@ -271,6 +273,7 @@ export interface ChatReaderDeps {
     firstMessage: string
     messageCount: number
     lastActivity: number
+    isArchived?: boolean
   }[]
 }
 
@@ -278,77 +281,121 @@ export type ChatReaderInstance = ReturnType<typeof createChatReader>
 
 export function createChatReader(deps?: ChatReaderDeps) {
   const projectsDir = deps?.projectsDir ?? DEFAULT_PROJECTS_DIR
+  const archiveDir = deps?.archiveDir ?? DEFAULT_ARCHIVE_DIR
   const decode = deps?.decodeProjectPath ?? decodeProjectPath
   const getStats = deps?.getProjectStats ?? defaultGetProjectStats
   const getDbSessions = deps?.getSessionSummariesFromDb ?? defaultGetSessionSummariesFromDb
 
-  function getSessionsForProject(projectDir: string): ChatSession[] {
-    try {
-      const files = fs.readdirSync(projectDir)
-      const jsonlFiles = files.filter((f) => f.endsWith('.jsonl') && !f.startsWith('agent-'))
-      const encodedPath = path.basename(projectDir)
+  function resolveSessionFile(
+    encodedProjectPath: string,
+    sessionId: string,
+  ): { filePath: string; isArchived: boolean } | null {
+    const liveFile = path.join(projectsDir, encodedProjectPath, `${sessionId}.jsonl`)
+    if (fs.existsSync(liveFile)) return { filePath: liveFile, isArchived: false }
+    const archiveFile = path.join(archiveDir, encodedProjectPath, `${sessionId}.jsonl`)
+    if (fs.existsSync(archiveFile)) return { filePath: archiveFile, isArchived: true }
+    return null
+  }
 
-      return jsonlFiles
-        .map((file) => {
-          const filePath = path.join(projectDir, file)
-          const messages = parseJsonlFile(filePath)
+  function resolveSubagentDir(
+    encodedProjectPath: string,
+    sessionId: string,
+  ): { dir: string; isArchived: boolean } | null {
+    const liveDir = path.join(projectsDir, encodedProjectPath, sessionId, 'subagents')
+    if (fs.existsSync(liveDir)) return { dir: liveDir, isArchived: false }
+    const archiveSubDir = path.join(archiveDir, encodedProjectPath, sessionId, 'subagents')
+    if (fs.existsSync(archiveSubDir)) return { dir: archiveSubDir, isArchived: true }
+    return null
+  }
 
-          if (messages.length === 0) {
-            return null
-          }
-
-          const sessionId = file.replace('.jsonl', '')
-          const firstUserMessage = messages.find((m) => m.type === 'user' && !isSystemMessage(m))
-          const firstMessageText = firstUserMessage
-            ? extractTextFromContent(firstUserMessage.message.content)
-            : 'No messages'
-
-          const timestamps = messages.map((m) => parseTimestamp(m.timestamp)).filter((t) => t > 0)
-          const lastActivity = timestamps.length > 0 ? Math.max(...timestamps) : 0
-
-          const projectPath = decode(encodedPath)
-          const visibleCount = messages.filter(
-            (m) => !isSystemMsg(m) && !hasNoVisibleContent(m),
-          ).length
-          const tokenUsage = computeSessionTokens(messages)
-
-          return {
-            id: sessionId,
-            projectPath,
-            projectName: extractProjectName(projectPath),
-            encodedPath,
-            messages,
-            firstMessage: firstMessageText.slice(0, 500),
-            lastActivity,
-            messageCount: visibleCount,
-            ...(tokenUsage && { tokenUsage }),
-          }
-        })
-        .filter((session): session is ChatSession => session !== null)
-        .sort((a, b) => b.lastActivity - a.lastActivity)
-    } catch {
-      return []
+  function listProjectEncodedPaths(): string[] {
+    const seen = new Set<string>()
+    const pushDirs = (root: string) => {
+      if (!fs.existsSync(root)) return
+      for (const name of fs.readdirSync(root)) {
+        const full = path.join(root, name)
+        try {
+          if (fs.statSync(full).isDirectory()) seen.add(name)
+        } catch {
+          continue
+        }
+      }
     }
+    pushDirs(projectsDir)
+    pushDirs(archiveDir)
+    return [...seen]
+  }
+
+  function resolveProjectDir(encodedPath: string): { dir: string; isArchived: boolean } | null {
+    const liveDir = path.join(projectsDir, encodedPath)
+    if (fs.existsSync(liveDir)) return { dir: liveDir, isArchived: false }
+    const archDir = path.join(archiveDir, encodedPath)
+    if (fs.existsSync(archDir)) return { dir: archDir, isArchived: true }
+    return null
+  }
+
+  function getSessionsForProject(encodedPath: string): ChatSession[] {
+    const sessionIds = new Map<string, { filePath: string; isArchived: boolean }>()
+
+    const collect = (root: string, isArchived: boolean) => {
+      const dir = path.join(root, encodedPath)
+      if (!fs.existsSync(dir)) return
+      try {
+        for (const file of fs.readdirSync(dir)) {
+          if (!file.endsWith('.jsonl') || file.startsWith('agent-')) continue
+          const sessionId = file.replace('.jsonl', '')
+          if (sessionIds.has(sessionId)) continue
+          sessionIds.set(sessionId, { filePath: path.join(dir, file), isArchived })
+        }
+      } catch {
+        // ignore unreadable dir
+      }
+    }
+
+    collect(projectsDir, false)
+    collect(archiveDir, true)
+
+    const sessions: ChatSession[] = []
+    for (const [sessionId, { filePath, isArchived }] of sessionIds) {
+      const messages = parseJsonlFile(filePath)
+      if (messages.length === 0) continue
+
+      const firstUserMessage = messages.find((m) => m.type === 'user' && !isSystemMessage(m))
+      const firstMessageText = firstUserMessage
+        ? extractTextFromContent(firstUserMessage.message.content)
+        : 'No messages'
+
+      const timestamps = messages.map((m) => parseTimestamp(m.timestamp)).filter((t) => t > 0)
+      const lastActivity = timestamps.length > 0 ? Math.max(...timestamps) : 0
+
+      const projectPath = decode(encodedPath)
+      const visibleCount = messages.filter((m) => !isSystemMsg(m) && !hasNoVisibleContent(m)).length
+      const tokenUsage = computeSessionTokens(messages)
+
+      sessions.push({
+        id: sessionId,
+        projectPath,
+        projectName: extractProjectName(projectPath),
+        encodedPath,
+        messages,
+        firstMessage: firstMessageText.slice(0, 500),
+        lastActivity,
+        messageCount: visibleCount,
+        ...(tokenUsage && { tokenUsage }),
+        ...(isArchived && { isArchived: true }),
+      })
+    }
+
+    return sessions.sort((a, b) => b.lastActivity - a.lastActivity)
   }
 
   function getAllProjects(): Project[] {
     try {
-      if (!fs.existsSync(projectsDir)) {
-        return []
-      }
-
-      const projectDirs = fs.readdirSync(projectsDir)
+      const projectDirs = listProjectEncodedPaths()
 
       return projectDirs
         .map((dir) => {
-          const projectDirPath = path.join(projectsDir, dir)
-          const stat = fs.statSync(projectDirPath)
-
-          if (!stat.isDirectory()) {
-            return null
-          }
-
-          const sessions = getSessionsForProject(projectDirPath)
+          const sessions = getSessionsForProject(dir)
 
           if (sessions.length === 0) {
             return null
@@ -375,14 +422,12 @@ export function createChatReader(deps?: ChatReaderDeps) {
   }
 
   function getProjectByPath(encodedPath: string): Project | null {
-    const projectDirPath = path.join(projectsDir, encodedPath)
-
     try {
-      if (!fs.existsSync(projectDirPath)) {
+      if (!resolveProjectDir(encodedPath)) {
         return null
       }
 
-      const sessions = getSessionsForProject(projectDirPath)
+      const sessions = getSessionsForProject(encodedPath)
 
       if (sessions.length === 0) {
         return null
@@ -407,21 +452,13 @@ export function createChatReader(deps?: ChatReaderDeps) {
 
   function getProjectsSummary(): ProjectSummary[] {
     try {
-      if (!fs.existsSync(projectsDir)) {
-        return []
-      }
-
-      const projectDirs = fs.readdirSync(projectsDir)
+      const projectDirs = listProjectEncodedPaths()
       const stats = getStats()
 
       return projectDirs
         .map((dir) => {
-          const projectDirPath = path.join(projectsDir, dir)
-          const stat = fs.statSync(projectDirPath)
-
-          if (!stat.isDirectory()) {
-            return null
-          }
+          const resolved = resolveProjectDir(dir)
+          if (!resolved) return null
 
           const projectPath = decode(dir)
 
@@ -431,28 +468,46 @@ export function createChatReader(deps?: ChatReaderDeps) {
 
           const outsideHome = isOutsideHome(projectPath)
 
-          const sessionFiles = getValidSessionFiles(projectDirPath)
-          if (sessionFiles.length === 0) {
+          const liveFiles = fs.existsSync(path.join(projectsDir, dir))
+            ? getValidSessionFiles(path.join(projectsDir, dir)).map((f) => ({
+                filePath: path.join(projectsDir, dir, f),
+              }))
+            : []
+
+          const liveSessionIds = new Set(
+            liveFiles.map((f) => path.basename(f.filePath).replace('.jsonl', '')),
+          )
+
+          const archiveFiles = fs.existsSync(path.join(archiveDir, dir))
+            ? getValidSessionFiles(path.join(archiveDir, dir))
+                .filter((f) => !liveSessionIds.has(f.replace('.jsonl', '')))
+                .map((f) => ({ filePath: path.join(archiveDir, dir, f) }))
+            : []
+
+          const allFiles = [...liveFiles, ...archiveFiles]
+          if (allFiles.length === 0) {
             return null
           }
 
           const dbStats = stats.get(dir)
 
           let lastActivity = 0
-          for (const file of sessionFiles) {
-            const filePath = path.join(projectDirPath, file)
-            const fileStat = fs.statSync(filePath)
-            const mtime = fileStat.mtime.getTime()
-            if (mtime > lastActivity) lastActivity = mtime
+          for (const { filePath } of allFiles) {
+            try {
+              const mtime = fs.statSync(filePath).mtime.getTime()
+              if (mtime > lastActivity) lastActivity = mtime
+            } catch {
+              continue
+            }
           }
 
-          const hasMemory = fs.existsSync(path.join(projectDirPath, 'memory', 'MEMORY.md'))
+          const hasMemory = fs.existsSync(path.join(projectsDir, dir, 'memory', 'MEMORY.md'))
 
           return {
             path: projectPath,
             name: extractProjectName(projectPath),
             encodedPath: dir,
-            sessionCount: dbStats?.sessionCount ?? sessionFiles.length,
+            sessionCount: dbStats?.sessionCount ?? allFiles.length,
             totalMessages: dbStats?.totalMessages ?? 0,
             lastActivity,
             hasMemory,
@@ -472,67 +527,61 @@ export function createChatReader(deps?: ChatReaderDeps) {
       return dbSessions.map((s) => ({ ...s, encodedPath }))
     }
 
-    const projectDirPath = path.join(projectsDir, encodedPath)
+    const seen = new Set<string>()
+    const results: SessionSummary[] = []
 
-    try {
-      if (!fs.existsSync(projectDirPath)) {
-        return []
-      }
+    const collect = (root: string, isArchived: boolean) => {
+      const dir = path.join(root, encodedPath)
+      if (!fs.existsSync(dir)) return
 
-      const sessionFiles = getValidSessionFiles(projectDirPath)
+      const sessionFiles = getValidSessionFiles(dir)
+      for (const file of sessionFiles) {
+        const sessionId = file.replace('.jsonl', '')
+        if (seen.has(sessionId)) continue
 
-      return sessionFiles
-        .map((file) => {
-          const filePath = path.join(projectDirPath, file)
-          const fileStat = fs.statSync(filePath)
+        const filePath = path.join(dir, file)
+        let fileStat: fs.Stats
+        try {
+          fileStat = fs.statSync(filePath)
+        } catch {
+          continue
+        }
 
-          if (fileStat.size === 0) {
-            return null
-          }
+        if (fileStat.size === 0) continue
 
-          const sessionId = file.replace('.jsonl', '')
-          const firstMessages = parseFirstLines(filePath, 100)
+        const firstMessages = parseFirstLines(filePath, 100)
+        if (firstMessages.length === 0) continue
 
-          if (firstMessages.length === 0) {
-            return null
-          }
+        const firstUserMessage = firstMessages.find((m) => m.type === 'user' && !isSystemMessage(m))
+        if (!firstUserMessage) continue
 
-          const firstUserMessage = firstMessages.find(
-            (m) => m.type === 'user' && !isSystemMessage(m),
-          )
+        const firstMessageText = extractTextFromContent(firstUserMessage.message.content)
+        const visibleCount = countVisibleMessages(filePath)
 
-          if (!firstUserMessage) {
-            return null
-          }
-
-          const firstMessageText = extractTextFromContent(firstUserMessage.message.content)
-          const visibleCount = countVisibleMessages(filePath)
-
-          return {
-            id: sessionId,
-            encodedPath,
-            firstMessage: firstMessageText.slice(0, 500),
-            messageCount: visibleCount,
-            lastActivity: fileStat.mtime.getTime(),
-          }
+        seen.add(sessionId)
+        results.push({
+          id: sessionId,
+          encodedPath,
+          firstMessage: firstMessageText.slice(0, 500),
+          messageCount: visibleCount,
+          lastActivity: fileStat.mtime.getTime(),
+          ...(isArchived && { isArchived: true }),
         })
-        .filter((session): session is SessionSummary => session !== null)
-        .sort((a, b) => b.lastActivity - a.lastActivity)
-    } catch {
-      return []
+      }
     }
+
+    collect(projectsDir, false)
+    collect(archiveDir, true)
+
+    return results.sort((a, b) => b.lastActivity - a.lastActivity)
   }
 
   function getSessionById(encodedProjectPath: string, sessionId: string): ChatSession | null {
-    const projectDirPath = path.join(projectsDir, encodedProjectPath)
-    const sessionFilePath = path.join(projectDirPath, `${sessionId}.jsonl`)
+    const resolved = resolveSessionFile(encodedProjectPath, sessionId)
+    if (!resolved) return null
 
     try {
-      if (!fs.existsSync(sessionFilePath)) {
-        return null
-      }
-
-      const messages = parseJsonlFile(sessionFilePath)
+      const messages = parseJsonlFile(resolved.filePath)
 
       if (messages.length === 0) {
         return null
@@ -560,6 +609,7 @@ export function createChatReader(deps?: ChatReaderDeps) {
         lastActivity,
         messageCount: visibleCount,
         ...(tokenUsage && { tokenUsage }),
+        ...(resolved.isArchived && { isArchived: true }),
       }
     } catch {
       return null
@@ -570,19 +620,19 @@ export function createChatReader(deps?: ChatReaderDeps) {
     encodedProjectPath: string,
     sessionId: string,
   ): SubagentSummary[] {
-    const subagentsDir = path.join(projectsDir, encodedProjectPath, sessionId, 'subagents')
+    const resolved = resolveSubagentDir(encodedProjectPath, sessionId)
 
     try {
-      if (!fs.existsSync(subagentsDir)) return []
+      if (!resolved) return []
 
       const files = fs
-        .readdirSync(subagentsDir)
+        .readdirSync(resolved.dir)
         .filter((f) => f.startsWith('agent-') && f.endsWith('.jsonl'))
 
       return files
         .map((file) => {
           const agentId = file.replace('agent-', '').replace('.jsonl', '')
-          const filePath = path.join(subagentsDir, file)
+          const filePath = path.join(resolved.dir, file)
           const messages = parseJsonlFile(filePath)
 
           if (messages.length === 0) return null
@@ -619,13 +669,9 @@ export function createChatReader(deps?: ChatReaderDeps) {
     sessionId: string,
     agentId: string,
   ): ChatSession | null {
-    const filePath = path.join(
-      projectsDir,
-      encodedProjectPath,
-      sessionId,
-      'subagents',
-      `agent-${agentId}.jsonl`,
-    )
+    const resolved = resolveSubagentDir(encodedProjectPath, sessionId)
+    if (!resolved) return null
+    const filePath = path.join(resolved.dir, `agent-${agentId}.jsonl`)
 
     try {
       if (!fs.existsSync(filePath)) return null
@@ -657,6 +703,7 @@ export function createChatReader(deps?: ChatReaderDeps) {
         lastActivity,
         messageCount: visibleCount,
         ...(tokenUsage && { tokenUsage }),
+        ...(resolved.isArchived && { isArchived: true }),
       }
     } catch {
       return null

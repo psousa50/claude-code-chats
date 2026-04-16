@@ -20,16 +20,19 @@ const noDbSessions = () =>
 
 let tmpDir: string
 let projectsDir: string
+let archiveDir: string
 let reader: ChatReaderInstance
 
 beforeEach(() => {
   resetUuidCounter()
   tmpDir = mkdtempSync(path.join(os.tmpdir(), 'chat-reader-test-'))
   projectsDir = path.join(tmpDir, 'projects')
+  archiveDir = path.join(tmpDir, 'archive')
   mkdirSync(projectsDir, { recursive: true })
 
   reader = createChatReader({
     projectsDir,
+    archiveDir,
     decodeProjectPath: simpleDecode,
     getProjectStats: emptyStats,
     getSessionSummariesFromDb: noDbSessions,
@@ -123,6 +126,7 @@ describe('getProjectsSummary', () => {
 
     const localReader = createChatReader({
       projectsDir,
+      archiveDir,
       decodeProjectPath: () => decodedPath,
       getProjectStats: emptyStats,
       getSessionSummariesFromDb: noDbSessions,
@@ -145,6 +149,7 @@ describe('getProjectsSummary', () => {
 
     const localReader = createChatReader({
       projectsDir,
+      archiveDir,
       decodeProjectPath: () => decodedPath,
       getProjectStats: emptyStats,
       getSessionSummariesFromDb: noDbSessions,
@@ -189,6 +194,7 @@ describe('getProjectsSummary', () => {
 
     const localReader = createChatReader({
       projectsDir,
+      archiveDir,
       decodeProjectPath: () => decodedPath,
       getProjectStats: emptyStats,
       getSessionSummariesFromDb: noDbSessions,

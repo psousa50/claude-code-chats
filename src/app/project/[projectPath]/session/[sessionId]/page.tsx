@@ -53,11 +53,18 @@ export default async function SessionPage({ params, searchParams }: Props) {
               </svg>
             </Link>
             <div className="flex-1 min-w-0 hidden sm:block">
-              <h1
-                className={`text-lg font-medium text-content-primary truncate ${cmd ? 'font-mono' : ''}`}
-              >
-                {sessionTitle}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1
+                  className={`text-lg font-medium text-content-primary truncate ${cmd ? 'font-mono' : ''}`}
+                >
+                  {sessionTitle}
+                </h1>
+                {session.isArchived && (
+                  <span className="shrink-0 text-[10px] uppercase tracking-wider font-medium text-content-tertiary border border-edge-subtle rounded px-1.5 py-0.5">
+                    Archived
+                  </span>
+                )}
+              </div>
               <p className="truncate">
                 <Link
                   href={`/project/${projectPath}`}

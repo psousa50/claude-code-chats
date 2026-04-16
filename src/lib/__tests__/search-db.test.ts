@@ -16,17 +16,20 @@ const trivialDecode = (encoded: string) => '/' + encoded.replace(/-/g, '/')
 
 let tmpDir: string
 let projectsDir: string
+let archiveDir: string
 let searchDb: SearchDbInstance
 
 beforeEach(() => {
   resetUuidCounter()
   tmpDir = mkdtempSync(path.join(os.tmpdir(), 'search-db-test-'))
   projectsDir = path.join(tmpDir, 'projects')
+  archiveDir = path.join(tmpDir, 'archive')
   mkdirSync(projectsDir, { recursive: true })
 
   searchDb = createSearchDb({
     dbPath: ':memory:',
     projectsDir,
+    archiveDir,
     decodeProjectPath: trivialDecode,
   })
 })
@@ -54,6 +57,7 @@ describe('migrations', () => {
     const db2 = createSearchDb({
       dbPath: ':memory:',
       projectsDir,
+      archiveDir,
       decodeProjectPath: trivialDecode,
     })
     expect(db2.getIndexStats()).toEqual({ fileCount: 0, messageCount: 0 })
@@ -98,11 +102,23 @@ describe('syncIndex', () => {
     expect(searchDb.getIndexStats().messageCount).toBe(2)
   })
 
-  it('detects removed files', () => {
+  it('promotes archive copy to primary when live file is removed', () => {
     const filePath = writeSession('my-project', 'sess1', toJsonl([makeUserMessage('hello')]))
     searchDb.syncIndex()
 
     rmSync(filePath)
+
+    const result = searchDb.syncIndex()
+    expect(result).toEqual({ added: 0, updated: 1, removed: 0 })
+    expect(searchDb.getIndexStats()).toEqual({ fileCount: 1, messageCount: 1 })
+  })
+
+  it('removes from index only when gone from both live and archive', () => {
+    const filePath = writeSession('my-project', 'sess1', toJsonl([makeUserMessage('hello')]))
+    searchDb.syncIndex()
+
+    rmSync(filePath)
+    rmSync(path.join(archiveDir, 'my-project', 'sess1.jsonl'))
 
     const result = searchDb.syncIndex()
     expect(result).toEqual({ added: 0, updated: 0, removed: 1 })

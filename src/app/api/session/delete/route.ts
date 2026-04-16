@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
+import { removeFromArchive, DEFAULT_ARCHIVE_DIR } from '@/lib/archive'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,24 +25,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const projectDir = path.join(PROJECTS_DIR, encodedPath)
-    const sessionFile = path.join(projectDir, `${sessionId}.jsonl`)
+    const liveProjectDir = path.join(PROJECTS_DIR, encodedPath)
+    const liveSessionFile = path.join(liveProjectDir, `${sessionId}.jsonl`)
+    const archiveSessionFile = path.join(DEFAULT_ARCHIVE_DIR, encodedPath, `${sessionId}.jsonl`)
 
-    if (!fs.existsSync(projectDir)) {
-      return NextResponse.json(
-        { error: 'Project not found', code: 'PROJECT_NOT_FOUND' },
-        { status: 404 },
-      )
-    }
+    const liveExists = fs.existsSync(liveSessionFile)
+    const archiveExists = fs.existsSync(archiveSessionFile)
 
-    if (!fs.existsSync(sessionFile)) {
+    if (!liveExists && !archiveExists) {
       return NextResponse.json(
         { error: 'Session not found', code: 'SESSION_NOT_FOUND' },
         { status: 404 },
       )
     }
 
-    fs.unlinkSync(sessionFile)
+    if (liveExists) {
+      fs.unlinkSync(liveSessionFile)
+      const liveSubagentDir = path.join(liveProjectDir, sessionId)
+      if (fs.existsSync(liveSubagentDir)) {
+        fs.rmSync(liveSubagentDir, { recursive: true, force: true })
+      }
+    }
+
+    removeFromArchive(encodedPath, sessionId)
 
     return NextResponse.json({ success: true })
   } catch (err) {

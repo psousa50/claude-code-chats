@@ -62,8 +62,9 @@ src/
     font-size-toggle.tsx     Font size cycle button
   lib/
     types.ts                 Core types — ChatMessage, ChatSession, Project, summaries, search results
-    chat-reader.ts           Reads/parses JSONL chat files from ~/.claude/projects/
+    chat-reader.ts           Reads/parses JSONL chat files from live + archive roots
     search-db.ts             SQLite FTS5 index — sync, search, summary cache, project stats
+    archive.ts               Mirrors live sessions into ~/.claude/chat-archive/ before CLI retention reaps them
     claude-cli.ts            Invokes Claude CLI for AI summary generation
     message-utils.ts         Content extraction, command parsing, system message detection
     summary-format.ts        Conversation sampling and formatting for summary prompts
@@ -75,12 +76,17 @@ src/
 ## Data Flow
 
 ```
-~/.claude/projects/{encoded-path}/{sessionId}.jsonl
+~/.claude/projects/{encoded-path}/{sessionId}.jsonl        (live — subject to ~30d CLI retention)
+~/.claude/chat-archive/{encoded-path}/{sessionId}.jsonl    (mirror — preserved after CLI reaps live copy)
+        │
+        ├── archive.ts ──────── mirror live → archive on every sync (mtime/size skip)
         │
         ├── chat-reader.ts ──── parse JSONL → filter user/assistant → build ChatSession objects
-        │                        └── subagents: {sessionId}/subagents/agent-{agentId}.jsonl
+        │                        └── resolves live first, falls back to archive
+        │                        └── subagents: {sessionId}/subagents/agent-{agentId}.jsonl (both roots)
         │
-        └── search-db.ts ────── index messages in FTS5 table (synced by file mtime)
+        └── search-db.ts ────── index messages in FTS5 table (synced by file mtime + path)
+                                 └── is_archived flag set when entry lives only in archive
                                  └── ~/.claude/chat-search.db
         │
         ▼
@@ -100,7 +106,9 @@ src/
 | `messages_fts` (FTS5) | Full-text searchable message content with session/project references |
 | `summaries`           | Cached AI-generated summaries (session or project scope)             |
 
-Schema versioned with incremental migrations (currently v1).
+`indexed_files` carries an `is_archived` flag so archive-only sessions can be distinguished in the UI. Rows are keyed on `(project_path, session_id)` during sync — when the live copy disappears, the row's `path` is updated to the archive location rather than removed.
+
+Schema versioned with incremental migrations (currently v3).
 
 ## API Surface
 
@@ -130,9 +138,10 @@ Schema versioned with incremental migrations (currently v1).
 ## Key Patterns
 
 - **Path encoding**: Filesystem paths encoded as dash-separated strings for directory names; multiple decoding strategies (simple, recursive, glob) handle edge cases
-- **Dependency injection**: `chat-reader` and `search-db` accept injectable deps for testability
+- **Dependency injection**: `chat-reader`, `search-db`, and `archive` accept injectable deps for testability
 - **Sync-on-read**: Search endpoint syncs the index before querying, keeping results fresh
 - **Auto-sync**: App syncs index on mount; `sync-complete` custom event triggers refetches across components
+- **Archive mirror**: Every `syncIndex()` calls `mirrorLiveToArchive()` to copy fresh live sessions (incl. subagents) into `~/.claude/chat-archive/` before Claude Code's ~30-day retention purges them. Copies preserve source mtime; same-mtime+size files are skipped. Readers prefer live paths and fall back to archive, so archived sessions remain visible (marked with an "Archived" badge)
 - **Theme system**: CSS custom properties + early script injection prevent flash of unstyled content; three modes (system/light/dark)
 - **Message classification**: System messages identified by meta flags, XML tags, and prefix patterns; filtered from counts and display by default
 - **Summary pipeline**: Conversations sampled (first 2 + last 2 pairs, evenly distributed middle), truncated, sent to Claude CLI, cached in SQLite
