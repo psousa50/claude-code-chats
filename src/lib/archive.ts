@@ -15,6 +15,49 @@ export interface ArchiveResult {
   skipped: number
 }
 
+export interface PruneResult {
+  pruned: number
+  bytesFreed: number
+}
+
+const DEFAULT_MAX_BYTES = 5 * 1024 * 1024 * 1024
+const ARCHIVE_MAX_SIZE_ENV = 'CC_CHATS_ARCHIVE_MAX_SIZE'
+
+const SIZE_UNITS: Record<string, number> = {
+  '': 1,
+  b: 1,
+  k: 1024,
+  kb: 1024,
+  m: 1024 ** 2,
+  mb: 1024 ** 2,
+  g: 1024 ** 3,
+  gb: 1024 ** 3,
+  t: 1024 ** 4,
+  tb: 1024 ** 4,
+}
+
+export function parseSizeString(raw: string): number | null {
+  const match = raw.trim().match(/^(\d+(?:\.\d+)?)\s*([a-zA-Z]*)$/)
+  if (!match) return null
+  const value = Number(match[1])
+  const multiplier = SIZE_UNITS[match[2].toLowerCase()]
+  if (!Number.isFinite(value) || multiplier === undefined) return null
+  return Math.floor(value * multiplier)
+}
+
+export function getArchiveMaxBytes(): number {
+  const raw = process.env[ARCHIVE_MAX_SIZE_ENV]
+  if (!raw) return DEFAULT_MAX_BYTES
+  const parsed = parseSizeString(raw)
+  if (parsed === null) {
+    console.warn(
+      `[cc-chats] Invalid ${ARCHIVE_MAX_SIZE_ENV}=${JSON.stringify(raw)}; falling back to default 5 GB`,
+    )
+    return DEFAULT_MAX_BYTES
+  }
+  return parsed
+}
+
 export function getArchiveDir(deps?: ArchiveDeps): string {
   return deps?.archiveDir ?? DEFAULT_ARCHIVE_DIR
 }
@@ -130,6 +173,128 @@ export function restoreFromArchive(
   }
 
   return 'restored'
+}
+
+interface ArchiveEntry {
+  encodedPath: string
+  sessionId: string
+  mtime: number
+  size: number
+  jsonlPath: string
+  sessionDir: string | null
+  subagentPaths: string[]
+}
+
+function collectArchiveEntries(archiveDir: string): ArchiveEntry[] {
+  const entries: ArchiveEntry[] = []
+  if (!fs.existsSync(archiveDir)) return entries
+
+  for (const projName of fs.readdirSync(archiveDir)) {
+    const projDir = path.join(archiveDir, projName)
+    let projStat: fs.Stats
+    try {
+      projStat = fs.statSync(projDir)
+    } catch {
+      continue
+    }
+    if (!projStat.isDirectory()) continue
+
+    for (const entry of fs.readdirSync(projDir)) {
+      if (!entry.endsWith('.jsonl')) continue
+      const jsonlPath = path.join(projDir, entry)
+      let jsonlStat: fs.Stats
+      try {
+        jsonlStat = fs.statSync(jsonlPath)
+      } catch {
+        continue
+      }
+      if (!jsonlStat.isFile()) continue
+
+      const sessionId = entry.replace('.jsonl', '')
+      const sessionDir = path.join(projDir, sessionId)
+      const subagentDir = path.join(sessionDir, 'subagents')
+      const subagentPaths: string[] = []
+      let size = jsonlStat.size
+
+      if (fs.existsSync(subagentDir)) {
+        for (const subFile of fs.readdirSync(subagentDir)) {
+          if (!subFile.endsWith('.jsonl')) continue
+          const subPath = path.join(subagentDir, subFile)
+          try {
+            size += fs.statSync(subPath).size
+            subagentPaths.push(subPath)
+          } catch {
+            continue
+          }
+        }
+      }
+
+      entries.push({
+        encodedPath: projName,
+        sessionId,
+        mtime: jsonlStat.mtime.getTime(),
+        size,
+        jsonlPath,
+        sessionDir: fs.existsSync(sessionDir) ? sessionDir : null,
+        subagentPaths,
+      })
+    }
+  }
+
+  return entries
+}
+
+export function pruneArchive(
+  maxBytes: number = getArchiveMaxBytes(),
+  deps?: ArchiveDeps,
+): PruneResult {
+  if (maxBytes <= 0) return { pruned: 0, bytesFreed: 0 }
+
+  const liveDir = getLiveDir(deps)
+  const archiveDir = getArchiveDir(deps)
+
+  const entries = collectArchiveEntries(archiveDir)
+  const total = entries.reduce((sum, e) => sum + e.size, 0)
+  if (total <= maxBytes) return { pruned: 0, bytesFreed: 0 }
+
+  entries.sort((a, b) => a.mtime - b.mtime)
+
+  let remaining = total
+  let pruned = 0
+  let bytesFreed = 0
+
+  for (const entry of entries) {
+    if (remaining <= maxBytes) break
+
+    const liveFile = path.join(liveDir, entry.encodedPath, `${entry.sessionId}.jsonl`)
+    if (fs.existsSync(liveFile)) continue
+
+    try {
+      fs.unlinkSync(entry.jsonlPath)
+    } catch {
+      continue
+    }
+    for (const sub of entry.subagentPaths) {
+      try {
+        fs.unlinkSync(sub)
+      } catch {
+        continue
+      }
+    }
+    if (entry.sessionDir && fs.existsSync(entry.sessionDir)) {
+      try {
+        fs.rmSync(entry.sessionDir, { recursive: true, force: true })
+      } catch {
+        // ignore
+      }
+    }
+
+    pruned++
+    bytesFreed += entry.size
+    remaining -= entry.size
+  }
+
+  return { pruned, bytesFreed }
 }
 
 export function removeFromArchive(

@@ -6,6 +6,7 @@ interface SyncResult {
   added: number
   updated: number
   removed: number
+  archivePruned?: number
 }
 
 export function SyncButton() {
@@ -55,13 +56,18 @@ export function SyncButton() {
         </svg>
       </button>
 
-      {result && (result.added > 0 || result.updated > 0 || result.removed > 0) && (
-        <div className="text-xs text-content-tertiary whitespace-nowrap animate-fade">
-          {result.added > 0 && `+${result.added}`}
-          {result.updated > 0 && ` ~${result.updated}`}
-          {result.removed > 0 && ` -${result.removed}`}
-        </div>
-      )}
+      {result &&
+        (result.added > 0 ||
+          result.updated > 0 ||
+          result.removed > 0 ||
+          (result.archivePruned ?? 0) > 0) && (
+          <div className="text-xs text-content-tertiary whitespace-nowrap animate-fade">
+            {result.added > 0 && `+${result.added}`}
+            {result.updated > 0 && ` ~${result.updated}`}
+            {result.removed > 0 && ` -${result.removed}`}
+            {(result.archivePruned ?? 0) > 0 && ` pruned ${result.archivePruned}`}
+          </div>
+        )}
     </div>
   )
 }

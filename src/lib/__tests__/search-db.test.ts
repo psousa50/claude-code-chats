@@ -67,7 +67,7 @@ describe('migrations', () => {
 
 describe('syncIndex', () => {
   it('returns zeroes for empty projects dir', () => {
-    expect(searchDb.syncIndex()).toEqual({ added: 0, updated: 0, removed: 0 })
+    expect(searchDb.syncIndex()).toEqual({ added: 0, updated: 0, removed: 0, archivePruned: 0 })
   })
 
   it('indexes a session file', () => {
@@ -78,7 +78,7 @@ describe('syncIndex', () => {
     )
 
     const result = searchDb.syncIndex()
-    expect(result).toEqual({ added: 1, updated: 0, removed: 0 })
+    expect(result).toEqual({ added: 1, updated: 0, removed: 0, archivePruned: 0 })
     expect(searchDb.getIndexStats()).toEqual({ fileCount: 1, messageCount: 2 })
   })
 
@@ -86,7 +86,7 @@ describe('syncIndex', () => {
     writeSession('my-project', 'sess1', toJsonl([makeUserMessage('hello')]))
     searchDb.syncIndex()
 
-    expect(searchDb.syncIndex()).toEqual({ added: 0, updated: 0, removed: 0 })
+    expect(searchDb.syncIndex()).toEqual({ added: 0, updated: 0, removed: 0, archivePruned: 0 })
   })
 
   it('detects updated files by mtime', () => {
@@ -98,7 +98,7 @@ describe('syncIndex', () => {
     utimesSync(filePath, future, future)
 
     const result = searchDb.syncIndex()
-    expect(result).toEqual({ added: 0, updated: 1, removed: 0 })
+    expect(result).toEqual({ added: 0, updated: 1, removed: 0, archivePruned: 0 })
     expect(searchDb.getIndexStats().messageCount).toBe(2)
   })
 
@@ -109,7 +109,7 @@ describe('syncIndex', () => {
     rmSync(filePath)
 
     const result = searchDb.syncIndex()
-    expect(result).toEqual({ added: 0, updated: 1, removed: 0 })
+    expect(result).toEqual({ added: 0, updated: 1, removed: 0, archivePruned: 0 })
     expect(searchDb.getIndexStats()).toEqual({ fileCount: 1, messageCount: 1 })
   })
 
@@ -121,7 +121,7 @@ describe('syncIndex', () => {
     rmSync(path.join(archiveDir, 'my-project', 'sess1.jsonl'))
 
     const result = searchDb.syncIndex()
-    expect(result).toEqual({ added: 0, updated: 0, removed: 1 })
+    expect(result).toEqual({ added: 0, updated: 0, removed: 1, archivePruned: 0 })
     expect(searchDb.getIndexStats()).toEqual({ fileCount: 0, messageCount: 0 })
   })
 
@@ -130,7 +130,7 @@ describe('syncIndex', () => {
     mkdirSync(dir, { recursive: true })
     writeFileSync(path.join(dir, 'agent-task.jsonl'), toJsonl([makeUserMessage('agent msg')]))
 
-    expect(searchDb.syncIndex()).toEqual({ added: 0, updated: 0, removed: 0 })
+    expect(searchDb.syncIndex()).toEqual({ added: 0, updated: 0, removed: 0, archivePruned: 0 })
   })
 
   it('ignores non-jsonl files', () => {
@@ -138,7 +138,7 @@ describe('syncIndex', () => {
     mkdirSync(dir, { recursive: true })
     writeFileSync(path.join(dir, 'notes.txt'), 'some notes')
 
-    expect(searchDb.syncIndex()).toEqual({ added: 0, updated: 0, removed: 0 })
+    expect(searchDb.syncIndex()).toEqual({ added: 0, updated: 0, removed: 0, archivePruned: 0 })
   })
 
   it('does not index system messages', () => {

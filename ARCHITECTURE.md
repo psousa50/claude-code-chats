@@ -130,11 +130,12 @@ Schema versioned with incremental migrations (currently v3).
 
 ## Configuration
 
-| Variable        | Purpose                                                      | Default  |
-| --------------- | ------------------------------------------------------------ | -------- |
-| `HOME`          | Locates `~/.claude/projects/` and `~/.claude/chat-search.db` | System   |
-| `CLAUDE_PATH`   | Path to Claude CLI binary for summary generation             | `claude` |
-| `--port` / `-p` | Server port (CLI flag)                                       | `3000`   |
+| Variable                    | Purpose                                                                         | Default  |
+| --------------------------- | ------------------------------------------------------------------------------- | -------- |
+| `HOME`                      | Locates `~/.claude/projects/` and `~/.claude/chat-search.db`                    | System   |
+| `CLAUDE_PATH`               | Path to Claude CLI binary for summary generation                                | `claude` |
+| `CC_CHATS_ARCHIVE_MAX_SIZE` | Hard cap for `~/.claude/chat-archive/` (accepts `5GB`, `500MB`, `0` to disable) | `5GB`    |
+| `--port` / `-p`             | Server port (CLI flag)                                                          | `3000`   |
 
 ## Key Patterns
 
@@ -143,6 +144,7 @@ Schema versioned with incremental migrations (currently v3).
 - **Sync-on-read**: Search endpoint syncs the index before querying, keeping results fresh
 - **Auto-sync**: App syncs index on mount; `sync-complete` custom event triggers refetches across components
 - **Archive mirror**: Every `syncIndex()` calls `mirrorLiveToArchive()` to copy fresh live sessions (incl. subagents) into `~/.claude/chat-archive/` before Claude Code's ~30-day retention purges them. Copies preserve source mtime; same-mtime+size files are skipped. Readers prefer live paths and fall back to archive, so archived sessions remain visible (marked with an "Archived" badge)
+- **Archive LRU prune**: After each mirror, `pruneArchive()` deletes the oldest archive-only sessions (jsonl + matching `subagents/` dir) until total archive size is under `CC_CHATS_ARCHIVE_MAX_SIZE`. Archive entries whose live copy still exists are skipped — the mirror would just re-copy them. Prune count surfaces in the sync-button indicator alongside add/update/remove
 - **Theme system**: CSS custom properties + early script injection prevent flash of unstyled content; three modes (system/light/dark)
 - **Message classification**: System messages identified by meta flags, XML tags, and prefix patterns; filtered from counts and display by default
 - **Summary pipeline**: Conversations sampled (first 2 + last 2 pairs, evenly distributed middle), truncated, sent to Claude CLI, cached in SQLite

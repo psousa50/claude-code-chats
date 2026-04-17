@@ -3,7 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { AISummary, ChatMessage } from './types'
 import { decodeProjectPath as defaultDecodeProjectPath } from './chat-reader'
-import { DEFAULT_ARCHIVE_DIR, mirrorLiveToArchive } from './archive'
+import { DEFAULT_ARCHIVE_DIR, mirrorLiveToArchive, pruneArchive } from './archive'
 
 const CLAUDE_DIR = path.join(process.env.HOME || '', '.claude')
 const DEFAULT_PROJECTS_DIR = path.join(CLAUDE_DIR, 'projects')
@@ -266,8 +266,17 @@ export function createSearchDb(deps?: SearchDbDeps) {
     }
   }
 
-  function syncIndex(): { added: number; updated: number; removed: number } {
+  function syncIndex(): {
+    added: number
+    updated: number
+    removed: number
+    archivePruned: number
+  } {
     mirrorLiveToArchive({ liveDir: projectsDir, archiveDir })
+    const { pruned: archivePruned } = pruneArchive(undefined, {
+      liveDir: projectsDir,
+      archiveDir,
+    })
     const currentFiles = getAllJsonlFiles()
     const currentKeys = new Set(currentFiles.map((f) => `${f.encodedPath}/${f.sessionId}`))
 
@@ -310,7 +319,7 @@ export function createSearchDb(deps?: SearchDbDeps) {
 
     transaction()
 
-    return { added, updated, removed }
+    return { added, updated, removed, archivePruned }
   }
 
   function search(query: string, limit: number = 50, projectPath?: string): SearchResult[] {

@@ -11,7 +11,13 @@ import {
 } from 'fs'
 import path from 'path'
 import os from 'os'
-import { mirrorLiveToArchive, removeFromArchive, restoreFromArchive } from '../archive'
+import {
+  mirrorLiveToArchive,
+  parseSizeString,
+  pruneArchive,
+  removeFromArchive,
+  restoreFromArchive,
+} from '../archive'
 
 let tmpDir: string
 let liveDir: string
@@ -159,6 +165,103 @@ describe('restoreFromArchive', () => {
 
     expect(readFileSync(path.join(liveDir, 'proj', 's1.jsonl'), 'utf-8')).toBe('session')
     expect(readFileSync(path.join(liveSubagents, 'agent-abc.jsonl'), 'utf-8')).toBe('agent-body')
+  })
+})
+
+describe('parseSizeString', () => {
+  const cases: Array<[string, number | null]> = [
+    ['0', 0],
+    ['1024', 1024],
+    ['5GB', 5 * 1024 ** 3],
+    ['5gb', 5 * 1024 ** 3],
+    ['5 GB', 5 * 1024 ** 3],
+    ['500MB', 500 * 1024 ** 2],
+    ['1.5gb', Math.floor(1.5 * 1024 ** 3)],
+    ['2K', 2 * 1024],
+    ['3t', 3 * 1024 ** 4],
+    ['100B', 100],
+    ['', null],
+    ['   ', null],
+    ['5XX', null],
+    ['abc', null],
+    ['GB', null],
+  ]
+
+  for (const [input, expected] of cases) {
+    it(`parses ${JSON.stringify(input)} → ${expected}`, () => {
+      expect(parseSizeString(input)).toBe(expected)
+    })
+  }
+})
+
+describe('pruneArchive', () => {
+  function writeArchivedOnly(proj: string, sessionId: string, body: string, mtime: Date): number {
+    const live = writeLiveSession(proj, sessionId, body)
+    utimesSync(live, mtime, mtime)
+    mirrorLiveToArchive({ liveDir, archiveDir })
+    rmSync(live)
+    return statSync(path.join(archiveDir, proj, `${sessionId}.jsonl`)).size
+  }
+
+  it('returns zero counts when archive is empty', () => {
+    expect(pruneArchive(1_000_000, { liveDir, archiveDir })).toEqual({ pruned: 0, bytesFreed: 0 })
+  })
+
+  it('skips pruning when archive is under cap', () => {
+    writeArchivedOnly('proj', 's1', 'x'.repeat(100), new Date('2026-01-01'))
+    const result = pruneArchive(10_000, { liveDir, archiveDir })
+    expect(result).toEqual({ pruned: 0, bytesFreed: 0 })
+  })
+
+  it('prunes oldest archived sessions until under cap', () => {
+    writeArchivedOnly('proj', 'old', 'x'.repeat(500), new Date('2026-01-01'))
+    writeArchivedOnly('proj', 'mid', 'x'.repeat(500), new Date('2026-02-01'))
+    writeArchivedOnly('proj', 'new', 'x'.repeat(500), new Date('2026-03-01'))
+
+    const result = pruneArchive(800, { liveDir, archiveDir })
+
+    expect(result.pruned).toBe(2)
+    expect(result.bytesFreed).toBeGreaterThanOrEqual(1000)
+    expect(existsSync(path.join(archiveDir, 'proj', 'old.jsonl'))).toBe(false)
+    expect(existsSync(path.join(archiveDir, 'proj', 'mid.jsonl'))).toBe(false)
+    expect(existsSync(path.join(archiveDir, 'proj', 'new.jsonl'))).toBe(true)
+  })
+
+  it('does not prune archive entries whose live copy still exists', () => {
+    // 'keep' is still live; 'old' is archive-only and older
+    writeArchivedOnly('proj', 'old', 'x'.repeat(500), new Date('2026-01-01'))
+    writeLiveSession('proj', 'keep', 'x'.repeat(500))
+    mirrorLiveToArchive({ liveDir, archiveDir })
+
+    const result = pruneArchive(100, { liveDir, archiveDir })
+
+    expect(existsSync(path.join(archiveDir, 'proj', 'keep.jsonl'))).toBe(true)
+    expect(existsSync(path.join(archiveDir, 'proj', 'old.jsonl'))).toBe(false)
+    expect(result.pruned).toBe(1)
+  })
+
+  it('prunes the subagent directory alongside its session', () => {
+    const live = writeLiveSession('proj', 's1', 'data')
+    const liveSubagents = path.join(liveDir, 'proj', 's1', 'subagents')
+    mkdirSync(liveSubagents, { recursive: true })
+    writeFileSync(path.join(liveSubagents, 'agent-abc.jsonl'), 'x'.repeat(500))
+    const oldDate = new Date('2026-01-01')
+    utimesSync(live, oldDate, oldDate)
+
+    mirrorLiveToArchive({ liveDir, archiveDir })
+    rmSync(path.join(liveDir, 'proj'), { recursive: true })
+
+    pruneArchive(10, { liveDir, archiveDir })
+
+    expect(existsSync(path.join(archiveDir, 'proj', 's1.jsonl'))).toBe(false)
+    expect(existsSync(path.join(archiveDir, 'proj', 's1'))).toBe(false)
+  })
+
+  it('is a no-op when cap is zero (disabled)', () => {
+    writeArchivedOnly('proj', 's1', 'x'.repeat(500), new Date('2026-01-01'))
+    const result = pruneArchive(0, { liveDir, archiveDir })
+    expect(result).toEqual({ pruned: 0, bytesFreed: 0 })
+    expect(existsSync(path.join(archiveDir, 'proj', 's1.jsonl'))).toBe(true)
   })
 })
 
